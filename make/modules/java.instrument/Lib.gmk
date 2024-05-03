@@ -30,7 +30,6 @@ include LibCommon.gmk
 ################################################################################
 
 ifeq ($(call isTargetOs, bsd), true)
-  LIBINSTRUMENT_CFLAGS += $(ICONV_CFLAGS)
   ifeq ($(OPENJDK_TARGET_OS_ENV), bsd.openbsd)
     BSD_JLI_LIB := -ljli_static
   else
@@ -42,6 +41,7 @@ endif
 $(eval $(call SetupJdkLibrary, BUILD_LIBINSTRUMENT, \
     NAME := instrument, \
     OPTIMIZATION := LOW, \
+    CFLAGS_bsd := $(ICONV_CFLAGS), \
     CFLAGS_windows := -Dstrcasecmp=stricmp, \
     CFLAGS_debug := -DJPLIS_LOGGING, \
     CFLAGS_release := -DNO_JPLIS_LOGGING, \
@@ -49,6 +49,8 @@ $(eval $(call SetupJdkLibrary, BUILD_LIBINSTRUMENT, \
     LDFLAGS_linux := -L$(call FindLibDirForModule, java.base), \
     LDFLAGS_macosx := -L$(call FindLibDirForModule, java.base), \
     LDFLAGS_aix := -L$(SUPPORT_OUTPUTDIR)/native/java.base, \
+    LDFLAGS_bsd := -L$(SUPPORT_OUTPUTDIR)/native/java.base \
+        $(ICONV_LDFLAGS), \
     JDK_LIBS := $(JDKLIB_LIBS), \
     JDK_LIBS_linux := -ljli, \
     JDK_LIBS_macosx := -ljli, \
