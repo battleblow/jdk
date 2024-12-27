@@ -54,7 +54,6 @@
 
 static const time_t NANOS_PER_SEC = 1000000000LL;
 static const time_t MICROS_PER_SEC = 1000000LL;
-static const time_t NANOS_PER_MICROSEC = 1000LL;
 
 class CPUPerformanceInterface::CPUPerformance : public CHeapObj<mtInternal> {
    friend class CPUPerformanceInterface;
@@ -123,7 +122,6 @@ class CPUPerformanceInterface::CPUPerformance : public CHeapObj<mtInternal> {
 #if defined(__APPLE__)
 
 CPUPerformanceInterface::CPUPerformance::CPUPerformance() {
-#ifdef __APPLE__
   _jvm_real = 0;
   _total_csr_nanos= 0;
   _jvm_context_switches = 0;
@@ -132,7 +130,6 @@ CPUPerformanceInterface::CPUPerformance::CPUPerformance() {
   _used_ticks = 0;
   _total_ticks = 0;
   _active_processor_count = 0;
-#endif
 }
 
 bool CPUPerformanceInterface::CPUPerformance::initialize() {

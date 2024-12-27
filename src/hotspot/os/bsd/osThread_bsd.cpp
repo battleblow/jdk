@@ -29,7 +29,13 @@
 #include <signal.h>
 
 OSThread::OSThread()
-  : _thread_id(0),
+  : _thread_id(
+#ifdef _ALLBSD_SOURCE
+        0
+#else
+        nullptr
+#endif
+    ),
     _pthread_id(nullptr),
     _unique_thread_id(0),
     _caller_sigmask(),
