@@ -416,12 +416,12 @@ JNIEXPORT jlongArray JNICALL Java_sun_jvm_hotspot_debugger_bsd_BsdDebuggerLocal_
   regs[REG_INDEX(RSP)] = gregs.r_rsp;
   regs[REG_INDEX(SS)] = gregs.r_ss;
 #ifdef __FreeBSD__
-  void **fs_base = NULL, **gs_base = NULL;
-  amd64_get_fsbase(fs_base);
-  amd64_get_gsbase(gs_base);
+  void *fs_base = NULL, *gs_base = NULL;
+  amd64_get_fsbase(&fs_base);
+  amd64_get_gsbase(&gs_base);
 
-  regs[REG_INDEX(FSBASE)] = (long) *fs_base;
-  regs[REG_INDEX(GSBASE)] = (long) *gs_base;
+  regs[REG_INDEX(FSBASE)] = (long) fs_base;
+  regs[REG_INDEX(GSBASE)] = (long) gs_base;
   regs[REG_INDEX(DS)] = gregs.r_ds;
   regs[REG_INDEX(ES)] = gregs.r_es;
   regs[REG_INDEX(FS)] = gregs.r_fs;
