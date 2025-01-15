@@ -123,7 +123,7 @@ public enum OperatingSystem {
     }
 
     /**
-     * {@return {@code true} if built for the AIX operating system}
+     * {@return {@code true} if built for a BSD based operating system}
      */
     @ForceInline
     public static boolean isBsd() {
