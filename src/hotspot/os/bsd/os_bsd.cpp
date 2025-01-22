@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 1999, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, The FreeBSD Foundation
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1915,9 +1916,20 @@ static char* anon_mmap(char* requested_addr, size_t bytes, bool exec) {
 }
 
 static int anon_munmap(char * addr, size_t size) {
-  if (::munmap(addr, size) == 0) {
+  // FreeBSD munmap allows unmapping arbitrary addresses by rounding the
+  // address down to the page boundary of the containing page, and adjusting
+  // the size accordingly. This is not the behaviour expected by the JVM
+  // (according to the tests), so we add an extra check to ensure only
+  // properly aligned addresses are allowed.
+  bool is_page_aligned = (size_t)addr % os::vm_page_size() == 0;
+
+  if (is_page_aligned && ::munmap(addr, size) == 0) {
     return 1;
   } else {
+    if (!is_page_aligned) {
+      errno = EINVAL;
+    }
+
     ErrnoPreserver ep;
     log_trace(os, map)("munmap failed: " RANGEFMT " errno=(%s)",
                        RANGEFMTARGS(addr, size),
