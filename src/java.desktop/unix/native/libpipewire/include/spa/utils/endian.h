@@ -7,6 +7,9 @@
 
 #if defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <sys/endian.h>
+#define __LITTLE_ENDIAN __ORDER_LITTLE_ENDIAN__
+#define __BIG_ENDIAN __ORDER_BIG_ENDIAN__
+#define __BYTE_ORDER __BYTE_ORDER__
 #define bswap_16 bswap16
 #define bswap_32 bswap32
 #define bswap_64 bswap64
