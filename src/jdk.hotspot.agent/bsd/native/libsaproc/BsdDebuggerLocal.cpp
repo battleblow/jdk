@@ -534,6 +534,12 @@ JNIEXPORT jstring JNICALL Java_sun_jvm_hotspot_debugger_bsd_BsdDebuggerLocal_dem
   if (sym == NULL) {
     THROW_NEW_DEBUGGER_EXCEPTION_("Error getting symbol string", NULL);
   }
+
+  // Only pass mangled names to dba::__cxa_demangle
+  if (sym[0] != '_' || sym[1] != 'Z') {
+    return jsym;
+  }
+
   char *demangled = abi::__cxa_demangle(sym, NULL, 0, &status);
   env->ReleaseStringUTFChars(jsym, sym);
   if ((demangled != NULL) && (status == 0)) {
