@@ -326,7 +326,8 @@ size_t os::rss() {
   size_t bufSize = sizeof kp;
 #ifndef __FreeBSD__
   u_int namelen = 6;
-  int mib[6] = {CTL_KERN, KERN_PROC_MIB, KERN_PROC_PID, pid, bufSize, 1};
+  int mib[6] = {CTL_KERN, KERN_PROC_MIB, KERN_PROC_PID, pid,
+                static_cast<int>(bufSize), 1};
 #else
   u_int namelen = 4;
   int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
