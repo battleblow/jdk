@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -98,13 +98,7 @@ AC_DEFUN([LIB_SETUP_JVM_LIBS],
   # 32-bit platforms needs fallback library for 8-byte atomic ops on Zero
   if HOTSPOT_CHECK_JVM_VARIANT(zero); then
     if test "x$OPENJDK_$1_OS" = xlinux &&
-        (test "x$OPENJDK_$1_CPU" = xarm ||
-        test "x$OPENJDK_$1_CPU" = xm68k ||
-        test "x$OPENJDK_$1_CPU" = xmips ||
-        test "x$OPENJDK_$1_CPU" = xmipsel ||
-        test "x$OPENJDK_$1_CPU" = xppc ||
-        test "x$OPENJDK_$1_CPU" = xsh ||
-        test "x$OPENJDK_$1_CPU" = xriscv32); then
+        test "x$OPENJDK_TARGET_CPU_BITS" = "x32"; then
       BASIC_JVM_LIBS_$1="$BASIC_JVM_LIBS_$1 -latomic"
     fi
   fi
@@ -139,9 +133,9 @@ AC_DEFUN_ONCE([LIB_SETUP_LIBRARIES],
 
   # Threading library
   if test "x$OPENJDK_TARGET_OS" = xlinux || test "x$OPENJDK_TARGET_OS" = xaix; then
-    BASIC_JVM_LIBS="$BASIC_JVM_LIBS -lpthread"
+    BASIC_JVM_LIBS="$BASIC_JVM_LIBS $LIBPTHREAD"
   elif test "x$OPENJDK_TARGET_OS" = xbsd; then
-    BASIC_JVM_LIBS="$BASIC_JVM_LIBS -pthread"
+    BASIC_JVM_LIBS="$BASIC_JVM_LIBS $LIBPTHREAD"
   fi
 
   # librt for legacy clock_gettime
@@ -199,7 +193,20 @@ AC_DEFUN_ONCE([LIB_SETUP_MISC_LIBS],
   AC_SUBST(LIBDL)
   LIBS="$save_LIBS"
 
-  if test "x$OPENJDK_TARGET_OS" = "xbsd"; then
+  # Setup posix pthread support
+  if test "x$OPENJDK_TARGET_OS" != "xwindows"; then
+    LIBPTHREAD="-lpthread"
+  else
+    LIBPTHREAD=""
+  fi
+  AC_SUBST(LIBPTHREAD)
+
+  # Setup libiconv flags and library
+  if test "x$OPENJDK_TARGET_OS" == "xaix" || test "x$OPENJDK_TARGET_OS" == "xmacosx"; then
+    ICONV_CFLAGS=
+    ICONV_LDFLAGS=
+    ICONV_LIBS=-liconv
+  elif test "x$OPENJDK_TARGET_OS" = "xbsd"; then
     if test "x$OPENJDK_TARGET_OS_ENV" = "xbsd.openbsd"; then
       ICONV_CFLAGS="-I/usr/local/include"
       ICONV_LDFLAGS="-L/usr/local/lib"
@@ -216,9 +223,8 @@ AC_DEFUN_ONCE([LIB_SETUP_MISC_LIBS],
   else
     ICONV_CFLAGS=
     ICONV_LDFLAGS=
-    ICONV_LIBS=-liconv
+    ICONV_LIBS=
   fi
-
   AC_SUBST(ICONV_CFLAGS)
   AC_SUBST(ICONV_LDFLAGS)
   AC_SUBST(ICONV_LIBS)
