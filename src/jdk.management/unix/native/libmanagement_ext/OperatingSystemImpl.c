@@ -144,7 +144,7 @@ Java_com_sun_management_internal_OperatingSystemImpl_initialize0
 }
 
 // Linux-specific implementation is in UnixOperatingSystem.c
-#if !defined(__linux__)
+#if !defined(__linux__) && !defined(__FreeBSD__)
 JNIEXPORT jlong JNICALL
 Java_com_sun_management_internal_OperatingSystemImpl_getCommittedVirtualMemorySize0
   (JNIEnv *env, jobject mbean)
@@ -158,25 +158,6 @@ Java_com_sun_management_internal_OperatingSystemImpl_getCommittedVirtualMemorySi
         throw_internal_error(env, "task_info failed");
     }
     return t_info.virtual_size;
-#elif defined(__FreeBSD__)
-    FILE *fp;
-    unsigned long end, start;
-    jlong total = 0;
-
-    if ((fp = fopen("/proc/curproc/map", "r")) == NULL) {
-        throw_internal_error(env, "Unable to open /proc/curproc/map");
-        return -1;
-    }
-
-    for (;;) {
-       // Ignore everything except start and end entries
-       if (fscanf(fp, "0x%lx 0x%lx %*[^\n]\n", &start, &end) != 2 || start > end)
-           break;
-       total += end - start;
-    }
-
-    fclose(fp);
-    return total;
 #else /* _ALLBSD_SOURCE */
     /*
      * XXXBSD: there's no way available to do it in FreeBSD, AFAIK.

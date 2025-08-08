@@ -24,6 +24,7 @@
  */
 
 #include "com_sun_management_internal_OperatingSystemImpl.h"
+#include "management_ext.h"
 
 #include <sys/resource.h>
 #include <sys/types.h>
@@ -176,5 +177,26 @@ Java_com_sun_management_internal_OperatingSystemImpl_getHostConfiguredCpuCount0
 #else
     // Not implemented yet
     return -1;
+#endif
+}
+
+
+JNIEXPORT jlong JNICALL
+Java_com_sun_management_internal_OperatingSystemImpl_getCommittedVirtualMemorySize0
+  (JNIEnv *env, jobject mbean)
+{
+#ifdef __FreeBSD__
+  rlim_t vmm_usage;
+
+  int result = getrlimitusage(RLIMIT_AS, 0, &vmm_usage);
+  if (result != 0) {
+    throw_internal_error(env, "Unable get committed memory size");
+    return -1;
+  }
+
+  return (jlong) vmm_usage;
+#else
+  // Not implemented yet
+  return -1;
 #endif
 }
