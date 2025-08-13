@@ -93,6 +93,10 @@ define SetupBuildLauncherBody
     endif
   endif
 
+  ifeq ($(call isTargetOs, bsd), true)
+    $1_LIBS += $(LIBZ_LIBS) $(LIBPTHREAD)
+  endif
+
   ifneq ($$($1_JAVA_ARGS), )
     $1_JAVA_ARGS_STR := '{ $$(strip $$(foreach a, \
         $$(addprefix -J, $$($1_JAVA_ARGS)) $$($1_LAUNCHER_CLASS), "$$a"$(COMMA) )) }'
