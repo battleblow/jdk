@@ -70,7 +70,10 @@ PRAGMA_DIAG_POP
 // option, e.g. realpath or getwd) or, in case of free(), take raw C-heap
 // pointers.  We generally want allocation to be done through NMT.
 FORBID_IMPORTED_C_FUNCTION(void* malloc(size_t size), "use os::malloc");
+#if defined(__clang__) && !defined(__OpenBSD__)
+// clang c++ new uses free() on OpenBSD at least
 FORBID_IMPORTED_C_FUNCTION(void free(void *ptr), "use os::free");
+#endif
 FORBID_IMPORTED_C_FUNCTION(void* calloc(size_t nmemb, size_t size), "use os::malloc and zero out manually");
 FORBID_IMPORTED_C_FUNCTION(void* realloc(void *ptr, size_t size), "use os::realloc");
 FORBID_IMPORTED_C_FUNCTION(char* strdup(const char *s), "use os::strdup");

@@ -42,7 +42,10 @@ FORBID_C_FUNCTION(char* strndup(const char*, size_t), "don't use");
 // These are unimplementable for Windows, and they aren't useful for a
 // POSIX implementation of NMT either.
 // https://stackoverflow.com/questions/62962839/stdaligned-alloc-missing-from-visual-studio-2019
+#if defined(__clang__) && !defined(__OpenBSD__)
+// clang c++ new uses posix_memalign() on OpenBSD at least
 FORBID_C_FUNCTION(int posix_memalign(void**, size_t, size_t), "don't use");
+#endif
 FORBID_C_FUNCTION(void* aligned_alloc(size_t, size_t), "don't use");
 
 // realpath with a null second argument mallocs a string for the result.
