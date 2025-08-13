@@ -235,7 +235,8 @@ public final class SystemProps {
         @Native private static final int _https_proxyHost_NDX = 1 + _http_proxyPort_NDX;
         @Native private static final int _https_proxyPort_NDX = 1 + _https_proxyHost_NDX;
         @Native private static final int _java_io_tmpdir_NDX = 1 + _https_proxyPort_NDX;
-        @Native private static final int _line_separator_NDX = 1 + _java_io_tmpdir_NDX;
+        @Native private static final int _java_net_preferIPV4Stack_NDX = 1 + _java_io_tmpdir_NDX;
+        @Native private static final int _line_separator_NDX = 1 + _java_net_preferIPV4Stack_NDX;
         @Native private static final int _native_encoding_NDX = 1 + _line_separator_NDX;
         @Native private static final int _os_arch_NDX = 1 + _native_encoding_NDX;
         @Native private static final int _os_name_NDX = 1 + _os_arch_NDX;
