@@ -810,7 +810,11 @@ size_t os::commit_memory_limit() {
 
 size_t os::reserve_memory_limit() {
   struct rlimit rlim;
+#ifdef RLIMIT_AS
   int getrlimit_res = getrlimit(RLIMIT_AS, &rlim);
+#else
+  int getrlimit_res = getrlimit(RLIMIT_DATA, &rlim);
+#endif
 
   // If there was an error calling getrlimit, conservatively assume no limit.
   if (getrlimit_res != 0) {
