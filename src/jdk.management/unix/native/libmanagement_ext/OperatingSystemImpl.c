@@ -317,6 +317,7 @@ Java_com_sun_management_internal_OperatingSystemImpl_getTotalMemorySize0
 
 
 
+#ifndef _BSDONLY_SOURCE
 JNIEXPORT jlong JNICALL
 Java_com_sun_management_internal_OperatingSystemImpl_getOpenFileDescriptorCount0
   (JNIEnv *env, jobject mbean)
@@ -365,8 +366,6 @@ Java_com_sun_management_internal_OperatingSystemImpl_getOpenFileDescriptorCount0
     free(fds);
 
     return nfiles;
-#elif defined(__OpenBSD__)
-    return getdtablecount();
 #else /* solaris/linux */
     DIR *dirp;
     struct dirent* dentp;
@@ -377,8 +376,6 @@ Java_com_sun_management_internal_OperatingSystemImpl_getOpenFileDescriptorCount0
 #define FD_DIR aix_fd_dir
     char aix_fd_dir[32];     /* the pid has at most 19 digits */
     snprintf(aix_fd_dir, 32, "/proc/%d/fd", getpid());
-#elif defined(_ALLBSD_SOURCE)
-#define FD_DIR "/dev/fd"
 #else
 #define FD_DIR "/proc/self/fd"
 #endif
@@ -402,6 +399,7 @@ Java_com_sun_management_internal_OperatingSystemImpl_getOpenFileDescriptorCount0
     return (fds - 1);
 #endif
 }
+#endif
 
 JNIEXPORT jlong JNICALL
 Java_com_sun_management_internal_OperatingSystemImpl_getMaxFileDescriptorCount0

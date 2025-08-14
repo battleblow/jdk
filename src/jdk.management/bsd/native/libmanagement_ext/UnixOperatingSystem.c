@@ -200,3 +200,47 @@ Java_com_sun_management_internal_OperatingSystemImpl_getCommittedVirtualMemorySi
   return -1;
 #endif
 }
+
+JNIEXPORT jlong JNICALL
+Java_com_sun_management_internal_OperatingSystemImpl_getOpenFileDescriptorCount0
+  (JNIEnv *env, jobject mbean)
+{
+#if defined(__FreeBSD__)
+    rlim_t nfiles;
+
+    int result = getrlimitusage(RLIMIT_NOFILE, 0, &nfiles);
+    if (result != 0) {
+      throw_internal_error(env, "Unable get number of file descriptors");
+      return -1;
+    }
+
+    return (jlong) nfiles;
+#elif defined(__OpenBSD__)
+    return getdtablecount();
+#else
+    // Fall back to iterating /dev/fd on other BSDs
+    DIR *dirp;
+    struct dirent* dentp;
+    jlong fds = 0;
+
+#define FD_DIR "/dev/fd"
+
+    dirp = opendir(FD_DIR);
+    if (dirp == NULL) {
+        throw_internal_error(env, "Unable to open directory " FD_DIR);
+        return -1;
+    }
+
+    // iterate through directory entries, skipping '.' and '..'
+    // each entry represents an open file descriptor.
+    while ((dentp = readdir(dirp)) != NULL) {
+        if (isdigit(dentp->d_name[0])) {
+            fds++;
+        }
+    }
+
+    closedir(dirp);
+    // subtract by 1 which was the fd open for this implementation
+    return (fds - 1);
+#endif
+}
