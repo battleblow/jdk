@@ -990,13 +990,7 @@ pid_t os::Bsd::gettid() {
 }
 
 intx os::current_thread_id() {
-#ifdef __APPLE__
   return (intx)os::Bsd::gettid();
-#elif defined(__FreeBSD__)
-  return (intx)os::Bsd::gettid();
-#else
-  return (intx)::pthread_self();
-#endif
 }
 
 int os::current_process_id() {
