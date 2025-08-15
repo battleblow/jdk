@@ -541,11 +541,7 @@ char* os::map_memory_to_file_aligned(size_t size, size_t alignment, int file_des
 }
 
 int os::get_fileno(FILE* fp) {
-#ifdef __OpenBSD__
-  return fileno(fp);
-#else
   return NOT_AIX(::)fileno(fp);
-#endif
 }
 
 struct tm* os::gmtime_pd(const time_t* clock, struct tm*  res) {
