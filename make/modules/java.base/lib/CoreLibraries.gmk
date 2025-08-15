@@ -198,12 +198,12 @@ $(eval $(call SetupJdkLibrary, BUILD_LIBJLI, \
     DISABLED_WARNINGS_clang_java_md_macosx.m := unused-variable, \
     LIBS_unix := $(LIBZ_LIBS), \
     LIBS_linux := $(LIBDL) $(LIBPTHREAD), \
+    LIBS_bsd := $(LIBPTHREAD),\
     LIBS_macosx := \
         -framework ApplicationServices \
         -framework Cocoa \
         -framework Security, \
     LIBS_windows := advapi32.lib comctl32.lib user32.lib, \
-    LIBS_bsd := -pthread,\
     STATIC_LIB_EXCLUDE_OBJS := $(LIBJLI_STATIC_EXCLUDE_OBJS), \
 ))
 
