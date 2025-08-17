@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2003, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2003, 2021, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2014, 2019, Red Hat Inc. All rights reserved.
+ * Copyright (c) 2021, Azul Systems, Inc. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +28,6 @@
 #define OS_CPU_BSD_AARCH64_ORDERACCESS_BSD_AARCH64_HPP
 
 // Included in orderAccess.hpp header file.
-
-#include "runtime/vm_version.hpp"
 
 // Implementation of class OrderAccess.
 
