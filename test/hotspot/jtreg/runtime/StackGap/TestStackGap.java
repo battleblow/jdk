@@ -27,6 +27,7 @@
  * @modules java.base/jdk.internal.misc
  * @library /test/lib
  * @requires os.family == "linux" | os.family == "freebsd" | os.family == "netbsd" | os.family == "openbsd"
+ * @requires !jdk.static
  * @compile T.java
  * @run main/native TestStackGap
  */
