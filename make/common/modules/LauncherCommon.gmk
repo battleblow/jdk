@@ -43,14 +43,6 @@ LAUNCHER_CFLAGS += -I$(TOPDIR)/src/java.base/share/native/launcher \
 MACOSX_PLIST_DIR := $(TOPDIR)/src/java.base/macosx/native/launcher
 JAVA_MANIFEST := $(TOPDIR)/src/java.base/windows/native/launcher/java.manifest
 
-ifeq ($(call isTargetOs, bsd), true)
-  ifeq ($(OPENJDK_TARGET_OS_ENV), bsd.openbsd)
-    BSD_JLI_LIB := -ljli_static
-  else
-    BSD_JLI_LIB := -ljli
-  endif
-endif
-
 ################################################################################
 # Build standard launcher.
 
@@ -99,6 +91,10 @@ define SetupBuildLauncherBody
     ifeq ($$($1_WINDOWS_JAVAW), true)
       $1_CFLAGS += -DJAVAW
     endif
+  endif
+
+  ifeq ($(call isTargetOs, bsd), true)
+    $1_LIBS += $(LIBZ_LIBS) $(LIBPTHREAD)
   endif
 
   ifneq ($$($1_JAVA_ARGS), )

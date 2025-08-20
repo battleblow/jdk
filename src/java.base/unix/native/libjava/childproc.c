@@ -120,7 +120,6 @@ markDescriptorsCloseOnExec(void)
 
     return 0;
 }
-#endif /* _BSDONLY_SOURCE */
 
 static int
 moveDescriptor(int fd_from, int fd_to)

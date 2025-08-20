@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2021, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2014, Red Hat Inc. All rights reserved.
+ * Copyright (c) 2021, Azul Systems, Inc. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +28,6 @@
 #define OS_CPU_BSD_AARCH64_JAVATHREAD_BSD_AARCH64_HPP
 
  private:
-
   void pd_initialize() {
     _anchor.clear();
   }
@@ -48,12 +48,8 @@ private:
   bool pd_get_top_frame(frame* fr_addr, void* ucontext, bool isInJava);
 public:
 
-#if defined(__APPLE__) || defined(__OpenBSD__)
   static Thread *aarch64_get_thread_helper() {
     return Thread::current();
   }
-#else
-  static Thread *aarch64_get_thread_helper();
-#endif
 
 #endif // OS_CPU_BSD_AARCH64_JAVATHREAD_BSD_AARCH64_HPP

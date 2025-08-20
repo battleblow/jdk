@@ -152,7 +152,7 @@ void os::check_core_dump_prerequisites(char* buffer, size_t bufferSize, bool che
 
 bool os::committed_in_range(address start, size_t size, address& committed_start, size_t& committed_size) {
 
-#ifdef _AIX
+#if defined(_AIX) || defined(__OpenBSD__)
   committed_start = start;
   committed_size = size;
   return true;
@@ -541,11 +541,7 @@ char* os::map_memory_to_file_aligned(size_t size, size_t alignment, int file_des
 }
 
 int os::get_fileno(FILE* fp) {
-#ifdef __OpenBSD__
-  return fileno(fp);
-#else
   return NOT_AIX(::)fileno(fp);
-#endif
 }
 
 struct tm* os::gmtime_pd(const time_t* clock, struct tm*  res) {
@@ -810,7 +806,11 @@ size_t os::commit_memory_limit() {
 
 size_t os::reserve_memory_limit() {
   struct rlimit rlim;
+#ifdef RLIMIT_AS
   int getrlimit_res = getrlimit(RLIMIT_AS, &rlim);
+#else
+  int getrlimit_res = getrlimit(RLIMIT_DATA, &rlim);
+#endif
 
   // If there was an error calling getrlimit, conservatively assume no limit.
   if (getrlimit_res != 0) {

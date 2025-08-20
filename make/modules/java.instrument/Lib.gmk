@@ -31,14 +31,6 @@ include LibCommon.gmk
 ## Build libinstrument
 ################################################################################
 
-ifeq ($(call isTargetOs, bsd), true)
-  ifeq ($(OPENJDK_TARGET_OS_ENV), bsd.openbsd)
-    BSD_JLI_LIB := -ljli_static
-  else
-    BSD_JLI_LIB := -ljli
-  endif
-endif
-
 # equivalent of strcasecmp is stricmp on Windows
 $(eval $(call SetupJdkLibrary, BUILD_LIBINSTRUMENT, \
     NAME := instrument, \

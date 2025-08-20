@@ -27,6 +27,7 @@
 #include "utilities/decoder_elf.hpp"
 #include "utilities/elfFile.hpp"
 #include "utilities/globalDefinitions.hpp"
+#include "utilities/permitForbiddenFunctions.hpp"
 
 #include <cxxabi.h>
 
@@ -45,14 +46,23 @@ bool ElfDecoder::demangle(const char* symbol, char *buf, int buflen) {
   if (symbol && *symbol == '.') symbol += 1;
 #endif
 
+  // __cxa_demangle will return a pointer and a status of 0 regardless
+  // of whether we pas in a mangled name or not, but it will barf out
+  // a meaningless string if the symbol is not mangled. So we only pass
+  // mangled names on to __cxa_demangle.
+  auto symlen = strlen(symbol);
+  if (symlen < 2 || (symbol[0] != '_' && symbol[1] != 'Z')) {
+    return false;
+  }
+
   // Don't pass buf to __cxa_demangle. In case of the 'buf' is too small,
   // __cxa_demangle will call system "realloc" for additional memory, which
   // may use different malloc/realloc mechanism that allocates 'buf'.
   if ((result = abi::__cxa_demangle(symbol, nullptr, nullptr, &status)) != nullptr) {
     jio_snprintf(buf, buflen, "%s", result);
-      // call c library's free
-      ALLOW_C_FUNCTION(::free, ::free(result);)
-      return true;
+    // call c library's free
+    permit_forbidden_function::free(result);
+    return true;
   }
   return false;
 }

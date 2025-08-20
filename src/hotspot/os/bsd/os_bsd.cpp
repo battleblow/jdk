@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 1999, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, The FreeBSD Foundation
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -326,7 +327,8 @@ size_t os::rss() {
   size_t bufSize = sizeof kp;
 #ifndef __FreeBSD__
   u_int namelen = 6;
-  int mib[6] = {CTL_KERN, KERN_PROC_MIB, KERN_PROC_PID, pid, bufSize, 1};
+  int mib[6] = {CTL_KERN, KERN_PROC_MIB, KERN_PROC_PID, pid,
+                static_cast<int>(bufSize), 1};
 #else
   u_int namelen = 4;
   int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
@@ -377,7 +379,11 @@ void os::Bsd::initialize_system_info() {
 
   // get processors count via hw.ncpus sysctl
   mib[0] = CTL_HW;
+#if defined(HW_NCPUONLINE)
+  mib[1] = HW_NCPUONLINE;
+#else
   mib[1] = HW_NCPU;
+#endif
   len = sizeof(cpu_val);
   if (sysctl(mib, 2, &cpu_val, &len, nullptr, 0) != -1 && cpu_val >= 1) {
     assert(len == sizeof(cpu_val), "unexpected data size");
@@ -765,7 +771,7 @@ bool os::create_thread(Thread* thread, ThreadType thr_type,
     // pthread_attr_setstacksize() function can fail
     // if the stack size exceeds a system-imposed limit.
     assert_status(status == EINVAL, status, "pthread_attr_setstacksize");
-    log_warning(os, thread)("The %sthread stack size specified is invalid: " SIZE_FORMAT "k",
+    log_warning(os, thread)("The %sthread stack size specified is invalid: %zuk",
                             (thr_type == compiler_thread) ? "compiler " : ((thr_type == java_thread) ? "" : "VM "),
                             stack_size / K);
     thread->set_osthread(nullptr);
@@ -989,13 +995,7 @@ pid_t os::Bsd::gettid() {
 }
 
 intx os::current_thread_id() {
-#ifdef __APPLE__
   return (intx)os::Bsd::gettid();
-#elif defined(__FreeBSD__)
-  return (intx)os::Bsd::gettid();
-#else
-  return (intx)::pthread_self();
-#endif
 }
 
 int os::current_process_id() {
@@ -1137,7 +1137,7 @@ bool os::dll_address_to_library_name(address addr, char* buf,
 // in case of error it checks if .dll/.so was built for the
 // same architecture as Hotspot is running on
 
-void *os::Bsd::dlopen_helper(const char *filename, int mode, char *ebuf, int ebuflen) {
+void *os::Bsd::dlopen_helper(const char *filename, char *ebuf, int ebuflen) {
 #ifndef IA32
   bool ieee_handling = IEEE_subnormal_handling_OK();
   if (!ieee_handling) {
@@ -1238,13 +1238,21 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen) {
   log_info(os)("attempting shared library load of %s", filename);
 
   void* result;
-  result = os::Bsd::dlopen_helper(filename, RTLD_LAZY, ebuf, ebuflen);
+  result = os::Bsd::dlopen_helper(filename, ebuf, ebuflen);
   if (result != nullptr) {
     return result;
   }
   if (ebuf == nullptr || ebuflen < 1) {
     // no error reporting requested
     return nullptr;
+  }
+  const char* error_report = ::dlerror();
+  if (error_report == nullptr) {
+    error_report = "dlerror returned no error description";
+  }
+  if (ebuf != nullptr && ebuflen > 0) {
+    ::strncpy(ebuf, error_report, ebuflen-1);
+    ebuf[ebuflen-1]='\0';
   }
   Events::log_dll_message(nullptr, "Loading shared library %s failed, %s", filename, error_report);
   log_info(os)("shared library load of %s failed, %s", filename, error_report);
@@ -1890,8 +1898,16 @@ bool os::remove_stack_guard_pages(char* addr, size_t size) {
 // function returns null to indicate failure.
 static char* anon_mmap(char* requested_addr, size_t bytes, bool exec) {
   // MAP_FIXED is intentionally left out, to leave existing mappings intact.
-  const int flags = MAP_PRIVATE | MAP_NORESERVE | MAP_ANONYMOUS
+  int flags = MAP_PRIVATE | MAP_NORESERVE | MAP_ANONYMOUS
       MACOS_ONLY(| (exec ? MAP_JIT : 0));
+
+#if defined(__FreeBSD__) && defined(MAP_EXCL)
+  // On FreeBSD we can use MAP_FIXED with MAP_EXCL to have mmap fail if any part of the
+  // requested region is already mapped.
+  if (requested_addr != nullptr) {
+    flags |= MAP_FIXED | MAP_EXCL;
+  }
+#endif
 
   // Map reserved/uncommitted pages PROT_NONE so we fail early if we
   // touch an uncommitted page. Otherwise, the read/write might
@@ -1908,9 +1924,20 @@ static char* anon_mmap(char* requested_addr, size_t bytes, bool exec) {
 }
 
 static int anon_munmap(char * addr, size_t size) {
-  if (::munmap(addr, size) == 0) {
+  // FreeBSD munmap allows unmapping arbitrary addresses by rounding the
+  // address down to the page boundary of the containing page, and adjusting
+  // the size accordingly. This is not the behaviour expected by the JVM
+  // (according to the tests), so we add an extra check to ensure only
+  // properly aligned addresses are allowed.
+  bool is_page_aligned = (size_t)addr % os::vm_page_size() == 0;
+
+  if (is_page_aligned && ::munmap(addr, size) == 0) {
     return 1;
   } else {
+    if (!is_page_aligned) {
+      errno = EINVAL;
+    }
+
     ErrnoPreserver ep;
     log_trace(os, map)("munmap failed: " RANGEFMT " errno=(%s)",
                        RANGEFMTARGS(addr, size),
@@ -2728,6 +2755,106 @@ bool os::start_debugging(char *buf, int buflen) {
   return yes;
 }
 
+// Java thread:
+//
+//   Low memory addresses
+//    +------------------------+
+//    |                        |\  Java thread created by VM does not have glibc
+//    |    glibc guard page    | - guard, attached Java thread usually has
+//    |                        |/  1 glibc guard page.
+// P1 +------------------------+ Thread::stack_base() - Thread::stack_size()
+//    |                        |\
+//    |  HotSpot Guard Pages   | - red, yellow and reserved pages
+//    |                        |/
+//    +------------------------+ StackOverflow::stack_reserved_zone_base()
+//    |                        |\
+//    |      Normal Stack      | -
+//    |                        |/
+// P2 +------------------------+ Thread::stack_base()
+//
+// Non-Java thread:
+//
+//   Low memory addresses
+//    +------------------------+
+//    |                        |\
+//    |  glibc guard page      | - usually 1 page
+//    |                        |/
+// P1 +------------------------+ Thread::stack_base() - Thread::stack_size()
+//    |                        |\
+//    |      Normal Stack      | -
+//    |                        |/
+// P2 +------------------------+ Thread::stack_base()
+//
+// ** P1 (aka bottom) and size are the address and stack size
+//    returned from pthread_attr_getstack().
+// ** P2 (aka stack top or base) = P1 + size
+
+void os::current_stack_base_and_size(address* base, size_t* size) {
+  address bottom;
+#ifdef __APPLE__
+  pthread_t self = pthread_self();
+  *base = (address) pthread_get_stackaddr_np(self);
+  *size = pthread_get_stacksize_np(self);
+# ifdef __x86_64__
+  // workaround for OS X 10.9.0 (Mavericks)
+  // pthread_get_stacksize_np returns 128 pages even though the actual size is 2048 pages
+  if (pthread_main_np() == 1) {
+    // At least on Mac OS 10.12 we have observed stack sizes not aligned
+    // to pages boundaries. This can be provoked by e.g. setrlimit() (ulimit -s xxxx in the
+    // shell). Apparently Mac OS actually rounds upwards to next multiple of page size,
+    // however, we round downwards here to be on the safe side.
+    *size = align_down(*size, getpagesize());
+
+    if ((*size) < (DEFAULT_MAIN_THREAD_STACK_PAGES * (size_t)getpagesize())) {
+      char kern_osrelease[256];
+      size_t kern_osrelease_size = sizeof(kern_osrelease);
+      int ret = sysctlbyname("kern.osrelease", kern_osrelease, &kern_osrelease_size, nullptr, 0);
+      if (ret == 0) {
+        // get the major number, atoi will ignore the minor amd micro portions of the version string
+        if (atoi(kern_osrelease) >= OS_X_10_9_0_KERNEL_MAJOR_VERSION) {
+          *size = (DEFAULT_MAIN_THREAD_STACK_PAGES*getpagesize());
+        }
+      }
+    }
+  }
+# endif
+  bottom = *base - *size;
+#elif defined(__OpenBSD__)
+  stack_t ss;
+  int rslt = pthread_stackseg_np(pthread_self(), &ss);
+
+  if (rslt != 0)
+    fatal("pthread_stackseg_np failed with error = %d", rslt);
+
+  *base = (address) ss.ss_sp;
+  *size = ss.ss_size;
+  bottom = *base - *size;
+#else
+  pthread_attr_t attr;
+
+  int rslt = pthread_attr_init(&attr);
+
+  // JVM needs to know exact stack location, abort if it fails
+  if (rslt != 0)
+    fatal("pthread_attr_init failed with error = %d", rslt);
+
+  rslt = pthread_attr_get_np(pthread_self(), &attr);
+
+  if (rslt != 0)
+    fatal("pthread_attr_get_np failed with error = %d", rslt);
+
+  if (pthread_attr_getstackaddr(&attr, (void **)&bottom) != 0 ||
+      pthread_attr_getstacksize(&attr, size) != 0) {
+    fatal("Can not locate current stack attributes!");
+  }
+
+  *base = bottom + *size;
+
+  pthread_attr_destroy(&attr);
+#endif
+  assert(os::current_stack_pointer() >= bottom &&
+         os::current_stack_pointer() < *base, "just checking");
+}
 void os::print_memory_mappings(char* addr, size_t bytes, outputStream* st) {}
 
 #if INCLUDE_JFR

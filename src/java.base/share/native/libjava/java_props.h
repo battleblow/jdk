@@ -103,7 +103,7 @@ typedef struct {
     char *exceptionList;
 #endif
 
-#ifdef _BSDONLY_SOURCE
+#ifdef __OpenBSD__
     char *java_net_preferIPv4Stack; /* Needed to default to true OpenBSD. */
 #endif
 

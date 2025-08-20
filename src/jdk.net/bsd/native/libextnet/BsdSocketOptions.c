@@ -33,6 +33,7 @@
 #include <netinet/in.h>
 #include "jni_util.h"
 
+#ifndef __OpenBSD__
 static jint socketOptionSupported(jint sockopt) {
     jint one = 1;
     jint rv, s;
@@ -55,6 +56,7 @@ static jint socketOptionSupported(jint sockopt) {
     close(s);
     return rv;
 }
+#endif
 
 static void handleError(JNIEnv *env, jint rv, const char *errmsg) {
     if (rv < 0) {

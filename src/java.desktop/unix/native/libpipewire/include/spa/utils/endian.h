@@ -5,8 +5,11 @@
 #ifndef SPA_ENDIAN_H
 #define SPA_ENDIAN_H
 
-#if defined(__FreeBSD__) || defined(__MidnightBSD__)
+#if defined(_BSDONLY_SOURCE)
 #include <sys/endian.h>
+#define __BIG_ENDIAN	_BIG_ENDIAN
+#define __LITTLE_ENDIAN _LITTLE_ENDIAN
+#define __BYTE_ORDER	_BYTE_ORDER
 #define bswap_16 bswap16
 #define bswap_32 bswap32
 #define bswap_64 bswap64
