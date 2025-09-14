@@ -259,6 +259,7 @@ getPlatformTimeZoneID()
     /*
      * Try reading the /var/db/zoneinfo file for FreeBSD.
      */
+    FILE *fp;
     if ((fp = fopen(ETC_TIMEZONE_FILE, "r")) != NULL) {
         char line[256];
 
