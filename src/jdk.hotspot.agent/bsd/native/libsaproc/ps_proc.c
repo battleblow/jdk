@@ -73,7 +73,7 @@ static bool process_read_data(struct ps_prochandle* ph, uintptr_t addr, char *bu
     errno = 0;
     rslt = ptrace(PT_READ_D, ph->pid, (caddr_t) aligned_addr, 0);
     if (errno) {
-      print_debug("ptrace(PT_READ_D, ..) failed for %d bytes @ %lx\n", size, addr);
+      print_error("ptrace(PT_READ_D, ..) failed for %d bytes @ %lx\n", size, addr);
       return false;
     }
     for (; aligned_addr != addr; aligned_addr++, ptr++);
@@ -89,7 +89,7 @@ static bool process_read_data(struct ps_prochandle* ph, uintptr_t addr, char *bu
     errno = 0;
     rslt = ptrace(PT_READ_D, ph->pid, (caddr_t) aligned_addr, 0);
     if (errno) {
-      print_debug("ptrace(PT_READ_D, ..) failed for %d bytes @ %lx\n", size, addr);
+      print_error("ptrace(PT_READ_D, ..) failed for %d bytes @ %lx\n", size, addr);
       return false;
     }
     *(int *)buf = rslt;
@@ -102,7 +102,7 @@ static bool process_read_data(struct ps_prochandle* ph, uintptr_t addr, char *bu
     errno = 0;
     rslt = ptrace(PT_READ_D, ph->pid, (caddr_t) aligned_addr, 0);
     if (errno) {
-      print_debug("ptrace(PT_READ_D, ..) failed for %d bytes @ %lx\n", size, addr);
+      print_error("ptrace(PT_READ_D, ..) failed for %d bytes @ %lx\n", size, addr);
       return false;
     }
     for (; aligned_addr != end_addr; aligned_addr++)
@@ -122,7 +122,7 @@ static bool process_get_lwp_regs(struct ps_prochandle* ph, lwpid_t lwpid, struct
   // we have already attached to all thread 'pid's, just use ptrace call
   // to get regset now. Note that we don't cache regset upfront for processes.
  if (ptrace(PT_GETREGS, ph->pid, (caddr_t) user, 0) < 0) {
-   print_debug("ptrace(PTRACE_GETREGS, ...) failed for lwp %d (%d)\n", lwpid, ph->pid);
+   print_error("ptrace(PTRACE_GETREGS, ...) failed for lwp %d (%d)\n", lwpid, ph->pid);
    return false;
  }
  return true;
@@ -139,7 +139,7 @@ static bool process_get_lwp_info(struct ps_prochandle *ph, lwpid_t lwp_id, void 
 static bool ptrace_continue(pid_t pid, int signal) {
   // pass the signal to the process so we don't swallow it
   if (ptrace(PT_CONTINUE, pid, NULL, signal) < 0) {
-    print_debug("ptrace(PTRACE_CONT, ..) failed for %d\n", pid);
+    print_error("ptrace(PTRACE_CONT, ..) failed for %d\n", pid);
     return false;
   }
   return true;
@@ -177,7 +177,7 @@ static attach_state_t ptrace_waitpid(pid_t pid) {
           continue;
           break;
         case ECHILD:
-          print_debug("waitpid() failed. Child process pid (%d) does not exist \n", pid);
+          print_error("waitpid() failed. Child process pid (%d) does not exist \n", pid);
           return ATTACH_THREAD_DEAD;
         case EINVAL:
           print_error("waitpid() failed. Invalid options argument.\n");
@@ -250,7 +250,7 @@ static bool read_lib_info(struct ps_prochandle* ph) {
 
   freep = kinfo_getvmmap(ph->pid, &cnt);
   if (freep == NULL) {
-      print_debug("can't get vm map for pid\n", ph->pid);
+      print_error("can't get vm map for pid\n", ph->pid);
       return false;
   }
 
@@ -299,7 +299,7 @@ static bool read_lib_info(struct ps_prochandle* ph) {
 
   do {
     if (process_read_data(ph, lmap_addr, (char *)lmap, sizeof(*lmap)) != true) {
-      print_debug("process_read_data failed for lmap_addr %p\n", lmap_addr);
+      print_error("process_read_data failed for lmap_addr %p\n", lmap_addr);
       free (l_name);
       free (lmap);
       return false;
@@ -307,7 +307,7 @@ static bool read_lib_info(struct ps_prochandle* ph) {
 
     if (process_read_data(ph, (uintptr_t)lmap->l_name, l_name,
         BUF_SIZE) != true) {
-      print_debug("process_read_data failed for lmap->l_name %p\n",
+      print_error("process_read_data failed for lmap->l_name %p\n",
           lmap->l_name);
       free (l_name);
       free (lmap);
@@ -338,7 +338,7 @@ static bool read_lib_info(struct ps_prochandle* ph) {
 // detach a given pid
 static bool ptrace_detach(pid_t pid) {
   if (pid && ptrace(PT_DETACH, pid, (caddr_t)1, 0) < 0) {
-    print_debug("ptrace(PTRACE_DETACH, ..) failed for %d\n", pid);
+    print_error("ptrace(PTRACE_DETACH, ..) failed for %d\n", pid);
     return false;
   } else {
     return true;
@@ -363,7 +363,7 @@ struct ps_prochandle* Pgrab(pid_t pid, char* err_buf, size_t err_buf_len) {
   attach_state_t attach_status = ATTACH_SUCCESS;
 
   if ( (ph = (struct ps_prochandle*) calloc(1, sizeof(struct ps_prochandle))) == NULL) {
-    print_debug("can't allocate memory for ps_prochandle\n");
+    print_error("can't allocate memory for ps_prochandle\n");
     return NULL;
   }
 
@@ -385,6 +385,7 @@ struct ps_prochandle* Pgrab(pid_t pid, char* err_buf, size_t err_buf_len) {
   // as the symbols in the pthread library will be used to figure out
   // the list of threads within the same process.
   if (read_lib_info(ph) != true) {
+     print_error("failed to read lib info\n");
      ptrace_detach(pid);
      free(ph);
      return NULL;
