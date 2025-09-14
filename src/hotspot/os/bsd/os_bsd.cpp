@@ -122,6 +122,9 @@
 #ifdef __APPLE__
   #include <mach/task_info.h>
   #include <mach-o/dyld.h>
+  // needed by current_stack_base_and_size() workaround for Mavericks
+  #define DEFAULT_MAIN_THREAD_STACK_PAGES 2048
+  #define OS_X_10_9_0_KERNEL_MAJOR_VERSION 13
 #endif
 
 #if defined(__OpenBSD__)
@@ -1227,7 +1230,7 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen) {
 
   log_info(os)("attempting shared library load of %s", filename);
 
-  return os::Bsd::dlopen_helper(filename, RTLD_LAZY, ebuf, ebuflen);
+  return os::Bsd::dlopen_helper(filename, ebuf, ebuflen);
 }
 #else
 void * os::dll_load(const char *filename, char *ebuf, int ebuflen) {

@@ -62,6 +62,7 @@
 # include <unistd.h>
 # include <sys/resource.h>
 # include <sys/stat.h>
+# include <sys/sysctl.h>
 # include <sys/time.h>
 # include <sys/utsname.h>
 # include <sys/socket.h>
@@ -73,7 +74,6 @@
 #endif
 #ifdef __FreeBSD__
 # include <machine/fpu.h>
-# include <sys/sysctl.h>
 # include <sys/procctl.h>
 #ifndef PROC_STACKGAP_STATUS
 #define PROC_STACKGAP_STATUS	18
@@ -85,14 +85,6 @@
 
 #if !defined(__APPLE__) && !defined(__NetBSD__)
 # include <pthread_np.h>
-#endif
-
-// needed by current_stack_base_and_size() workaround for Mavericks
-#if defined(__APPLE__)
-# include <sys/types.h>
-# include <sys/sysctl.h>
-# define DEFAULT_MAIN_THREAD_STACK_PAGES 2048
-# define OS_X_10_9_0_KERNEL_MAJOR_VERSION 13
 #endif
 
 #ifdef AMD64
