@@ -13,6 +13,15 @@
 #define bswap_16 bswap16
 #define bswap_32 bswap32
 #define bswap_64 bswap64
+#ifndef __BYTE_ORDER
+#define __BYTE_ORDER _BYTE_ORDER
+#endif
+#ifndef __BIG_ENDIAN
+#define __BIG_ENDIAN _BIG_ENDIAN
+#endif
+#ifndef __LITTLE_ENDIAN
+#define __LITTLE_ENDIAN _LITTLE_ENDIAN
+#endif
 #elif defined(_MSC_VER) && defined(_WIN32)
 #include <stdlib.h>
 #define __LITTLE_ENDIAN 1234
