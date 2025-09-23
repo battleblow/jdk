@@ -459,7 +459,7 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
           int guard_pages = 0;
           size_t size = sizeof(guard_pages);
           if (sysctlbyname("security.bsd.stack_guard_page",
-                           &guard_pages, &size, NULL, 0) == 0 &&
+                           &guard_pages, &size, nullptr, 0) == 0 &&
               guard_pages > 0) {
             addr -= guard_pages * os::vm_page_size();
           }

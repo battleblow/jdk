@@ -48,7 +48,7 @@ bool JavaThread::pd_get_top_frame_for_signal_handler(frame* fr_addr,
     // Try to find the top-most Java frame on Zero stack then.
     intptr_t* sp = zero_stack()->sp();
     ZeroFrame* zf = top_zero_frame();
-    while (zf != NULL) {
+    while (zf != nullptr) {
       if (zf->is_interpreter_frame()) {
         interpreterState istate = zf->as_interpreter_frame()->interpreter_state();
         if (istate->self_link() == istate) {

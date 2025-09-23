@@ -264,7 +264,7 @@ jlong os::total_swap_space() {
   for (n = 0, npages = 0; ; n++) {
     mib[mibsize] = n;
     size = sizeof(xsw);
-    if (sysctl(mib, mibsize + 1, &xsw, &size, NULL, 0) == -1)
+    if (sysctl(mib, mibsize + 1, &xsw, &size, nullptr, 0) == -1)
       break;
     npages += xsw.xsw_nblks;
   }
@@ -299,7 +299,7 @@ jlong os::free_swap_space() {
   for (n = 0, npages = 0; ; n++) {
     mib[mibsize] = n;
     size = sizeof(xsw);
-    if (sysctl(mib, mibsize + 1, &xsw, &size, NULL, 0) == -1)
+    if (sysctl(mib, mibsize + 1, &xsw, &size, nullptr, 0) == -1)
       break;
     npages += (xsw.xsw_nblks - xsw.xsw_used);
   }
@@ -336,7 +336,7 @@ size_t os::rss() {
   u_int namelen = 4;
   int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
 #endif
-  if (sysctl(mib, namelen, &kp, &bufSize, NULL, 0) != -1) {
+  if (sysctl(mib, namelen, &kp, &bufSize, nullptr, 0) != -1) {
     return kp.KI_RSS * getpagesize();
   }
 #endif // __APPLE__

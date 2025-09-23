@@ -63,7 +63,7 @@ address os::current_stack_pointer() {
 
 frame os::get_sender_for_C_frame(frame* fr) {
   ShouldNotCallThis();
-  return frame(NULL, NULL); // silence compile warning.
+  return frame(nullptr, nullptr); // silence compile warning.
 }
 
 frame os::current_frame() {
@@ -162,7 +162,7 @@ address os::fetch_frame_from_context(const void* ucVoid,
   address epc;
   const ucontext_t* uc = (const ucontext_t*)ucVoid;
 
-  if (uc != NULL) {
+  if (uc != nullptr) {
     epc = os::Posix::ucontext_get_pc(uc);
     if (ret_sp) {
       *ret_sp = (intptr_t*) os::Bsd::ucontext_get_sp(uc);
@@ -171,7 +171,7 @@ address os::fetch_frame_from_context(const void* ucVoid,
       *ret_fp = (intptr_t*) os::Bsd::ucontext_get_fp(uc);
     }
   } else {
-    epc = NULL;
+    epc = nullptr;
     if (ret_sp) {
       *ret_sp = nullptr;
     }
@@ -187,7 +187,7 @@ frame os::fetch_frame_from_context(const void* ucVoid) {
   // This code is only called from error handler to get PC and SP.
   // We don't have the ready ZeroFrame* at this point, so fake the
   // frame with bare minimum.
-  if (ucVoid != NULL) {
+  if (ucVoid != nullptr) {
     const ucontext_t* uc = (const ucontext_t*)ucVoid;
     frame dummy = frame();
     dummy.set_pc(os::Posix::ucontext_get_pc(uc));
