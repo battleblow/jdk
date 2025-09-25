@@ -66,7 +66,7 @@ $(eval $(call SetupBuildLauncher, keytool, \
     MAIN_CLASS := sun.security.tools.keytool.Main, \
 ))
 
-ifeq ($(call isTargetOs, linux bsd), true)
+ifeq ($(call isTargetOs, linux), true)
   ##############################################################################
   ## Build jexec
   ##############################################################################
