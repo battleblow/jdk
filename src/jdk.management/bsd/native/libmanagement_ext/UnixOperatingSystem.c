@@ -37,6 +37,10 @@
 
 #include "jvm.h"
 
+#if !defined(MB)
+#define MB      (1024UL * 1024UL)
+#endif
+
 JNIEXPORT jdouble JNICALL
 Java_com_sun_management_internal_OperatingSystemImpl_getCpuLoad0
 (JNIEnv *env, jobject dummy)
@@ -196,8 +200,8 @@ Java_com_sun_management_internal_OperatingSystemImpl_getCommittedVirtualMemorySi
 
   return (jlong) vmm_usage;
 #else
-  // Not implemented yet
-  return -1;
+  // Not implemented yet, use fallback value used historically here.
+  return (64 * MB);
 #endif
 }
 

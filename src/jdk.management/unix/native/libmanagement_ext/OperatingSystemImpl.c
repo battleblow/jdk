@@ -144,7 +144,7 @@ Java_com_sun_management_internal_OperatingSystemImpl_initialize0
 }
 
 // Linux-specific implementation is in UnixOperatingSystem.c
-#if !defined(__linux__) && !defined(__FreeBSD__)
+#if !defined(__linux__) && !defined(_BSDONLY_SOURCE)
 JNIEXPORT jlong JNICALL
 Java_com_sun_management_internal_OperatingSystemImpl_getCommittedVirtualMemorySize0
   (JNIEnv *env, jobject mbean)
