@@ -1,0 +1,145 @@
+name: Build (OpenBSD)
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      runs-on:
+        required: true
+        type: string
+      vm-arch:
+        required: true
+        type: string
+      vm-release:
+        required: true
+        type: string
+      extra-conf-options:
+        required: false
+        type: string
+      make-target:
+        required: false
+        type: string
+        default: 'product-bundles test-bundles'
+      debug-levels:
+        required: false
+        type: string
+        default: '[ "debug", "release" ]'
+      configure-arguments:
+        required: false
+        type: string
+      make-arguments:
+        required: false
+        type: string
+      dry-run:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build-openbsd:
+    name: build
+    runs-on: ${{ inputs.runs-on }}
+
+    env:
+      MYTOKEN : ${{ secrets.MYTOKEN }}
+      VM_SCRIPT_DIR : ${{ github.workspace }}/../../_actions/vmactions/openbsd-vm/v1
+
+    strategy:
+      fail-fast: false
+      matrix:
+        debug-level: ${{ fromJSON(inputs.debug-levels) }}
+        include:
+          - debug-level: debug
+            flags: --with-debug-level=fastdebug
+            suffix: -debug
+
+    steps:
+      - name: 'Checkout the JDK source'
+        uses: actions/checkout@v4
+
+      - name: 'Get the BootJDK'
+        id: bootjdk
+        uses: ./.github/actions/get-bootjdk
+        with:
+          platform: ${{ inputs.platform }}
+
+      - name: 'Get JTReg'
+        id: jtreg
+        uses: ./.github/actions/get-jtreg
+
+      - name: 'Get GTest'
+        id: gtest
+        uses: ./.github/actions/get-gtest
+
+      - name: 'Start OpenBSD VM'
+        uses: vmactions/openbsd-vm@v1
+        with:
+          release: ${{ inputs.vm-release }}
+          arch: ${{ inputs.vm-arch }}
+          mem: 12288
+          cpu: 4
+          envs: 'MYTOKEN'
+          usesh: true
+          copyback: false
+          prepare: |
+            mount -u -o wxallowed /home
+            usermod -L pbuild root
+            echo 'cd $GITHUB_WORKSPACE' >> ~/.vmenv
+
+      - name: 'Install toolchain and dependencies in VM'
+        shell: openbsd {0}
+        run: |
+          until pkg_add metaauto autoconf%2.69 gtar-- zip unzip-- cups-libs bash ggrep gmake dwz libiconv harfbuzz jpeg lcms2 png giflib; do
+            echo Retrying in 10 seconds; sleep 10;
+          done
+
+      - name: 'Configure in VM'
+        shell: openbsd {0}
+        run: >
+          . ~/.vmenv && env
+          AUTOCONF_VERSION=2.69
+          bash configure
+          --with-conf-name=${{ inputs.platform }}
+          ${{ matrix.flags }}
+          --with-version-opt=${GITHUB_ACTOR}-${GITHUB_SHA}
+          --with-boot-jdk=${{ steps.bootjdk.outputs.path }}
+          --with-jtreg=${{ steps.jtreg.outputs.path }}
+          --with-gtest=${{ steps.gtest.outputs.path }}
+          --with-zlib=system
+          --with-jmod-compress=zip-1
+          --with-stdc++lib=dynamic
+          --with-toolchain-type=clang
+          --with-fontconfig=/usr/X11R6
+          --with-cups=/usr/local
+          --with-freetype=system
+          --with-zlib=system
+          --with-libpng=system
+          --with-libjpeg=system
+          --with-lcms=system
+          --with-harfbuzz=system
+          --with-giflib=system
+          --with-giflib-include=/usr/local/include
+          --with-giflib-lib=/usr/local/lib
+          ${{ inputs.extra-conf-options }} ${{ inputs.configure-arguments }} || (
+          echo "Dumping config.log:" &&
+          cat config.log &&
+          exit 1)
+
+      - name: 'Build In VM'
+        id: build
+        uses: ./.github/actions/do-build-vm
+        with:
+          make-target: '${{ inputs.make-target }} ${{ inputs.make-arguments }}'
+          platform: ${{ inputs.platform }}
+          vm-name: 'openbsd'
+          debug-suffix: '${{ matrix.suffix }}'
+        if: ${{ inputs.dry-run == false }}
+
+      - name: 'Upload bundles'
+        uses: ./.github/actions/upload-bundles
+        with:
+          platform: ${{ inputs.platform }}
+          debug-suffix: '${{ matrix.suffix }}'
+        if: ${{ inputs.dry-run == false }}
