@@ -1,0 +1,145 @@
+name: Build (FreeBSD)
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      runs-on:
+        required: true
+        type: string
+      vm-arch:
+        required: true
+        type: string
+      vm-release:
+        required: true
+        type: string
+      extra-conf-options:
+        required: false
+        type: string
+      make-target:
+        required: false
+        type: string
+        default: 'product-bundles test-bundles'
+      debug-levels:
+        required: false
+        type: string
+        default: '[ "debug", "release" ]'
+      configure-arguments:
+        required: false
+        type: string
+      make-arguments:
+        required: false
+        type: string
+      dry-run:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build-freebsd:
+    name: build
+    runs-on: ${{ inputs.runs-on }}
+
+    env:
+      MYTOKEN : ${{ secrets.MYTOKEN }}
+      VM_SCRIPT_DIR : ${{ github.workspace }}/../../_actions/vmactions/freebsd-vm/v1
+
+    strategy:
+      fail-fast: false
+      matrix:
+        debug-level: ${{ fromJSON(inputs.debug-levels) }}
+        include:
+          - debug-level: debug
+            flags: --with-debug-level=fastdebug
+            suffix: -debug
+
+    steps:
+      - name: 'Checkout the JDK source'
+        uses: actions/checkout@v4
+
+      - name: 'Set the BootJDK path'
+        id: bootjdk
+        run: echo 'path=/usr/local/openjdk24' >> $GITHUB_OUTPUT
+
+      - name: 'Get JTReg'
+        id: jtreg
+        uses: ./.github/actions/get-jtreg
+
+      - name: 'Get GTest'
+        id: gtest
+        uses: ./.github/actions/get-gtest
+
+      - name: 'Start FreeBSD VM'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: ${{ inputs.vm-release }}
+          arch: ${{ inputs.vm-arch }}
+          mem: 12288
+          cpu: 4
+          envs: 'MYTOKEN'
+          usesh: true
+          copyback: false
+          prepare: |
+            mount -t procfs proc /proc
+            echo 'cd $GITHUB_WORKSPACE' >> ~/.vmenv
+
+      - name: 'Install toolchain and dependencies in VM'
+        shell: freebsd {0}
+        run: >
+          pkg install -y openjdk24 autoconf automake pkgconf gnugrep gtar zip unzip cups bash gmake dwz libiconv harfbuzz lcms2 png giflib jpeg-turbo gsed
+
+      - name: 'Configure in VM'
+        shell: freebsd {0}
+        run: >
+          . ~/.vmenv &&
+          bash configure
+          SED=/usr/local/bin/gsed
+          GREP=/usr/local/bin/ggrep
+          --with-conf-name=${{ inputs.platform }}
+          ${{ matrix.flags }}
+          --with-version-opt=${GITHUB_ACTOR}-${GITHUB_SHA}
+          --with-boot-jdk=${{ steps.bootjdk.outputs.path }}
+          --with-jtreg=${{ steps.jtreg.outputs.path }}
+          --with-gtest=${{ steps.gtest.outputs.path }}
+          --with-zlib=system
+          --with-jmod-compress=zip-1
+          --with-stdc++lib=dynamic
+          --with-toolchain-type=clang
+          --with-fontconfig=/usr/local
+          --with-cups=/usr/local
+          --with-freetype=system
+          --with-zlib=system
+          --with-libpng=system
+          --with-libjpeg=system
+          --with-lcms=system
+          --with-harfbuzz=system
+          --with-giflib=system
+          --with-giflib=system
+          --with-giflib-include=/usr/local/include
+          --with-giflib-lib=/usr/local/lib
+          --with-alsa=/usr/local
+          --x-includes=/usr/local/include
+          --x-libraries=/usr/local/lib
+          ${{ inputs.extra-conf-options }} ${{ inputs.configure-arguments }} || (
+          echo "Dumping config.log:" &&
+          cat config.log &&
+          exit 1)
+
+      - name: 'Build In VM'
+        id: build
+        uses: ./.github/actions/do-build-vm
+        with:
+          make-target: '${{ inputs.make-target }} ${{ inputs.make-arguments }}'
+          platform: ${{ inputs.platform }}
+          vm-name: 'freebsd'
+          debug-suffix: '${{ matrix.suffix }}'
+        if: ${{ inputs.dry-run == false }}
+
+      - name: 'Upload bundles'
+        uses: ./.github/actions/upload-bundles
+        with:
+          platform: ${{ inputs.platform }}
+          debug-suffix: '${{ matrix.suffix }}'
+        if: ${{ inputs.dry-run == false }}
