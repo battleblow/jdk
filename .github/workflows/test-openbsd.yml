@@ -184,6 +184,7 @@ jobs:
               echo Retrying in 10 seconds; sleep 10;
             done
           run: >
+            ulimit -Sd $(ulimit -dH) &&
             gmake test-prebuilt
             TEST='${{ matrix.test-suite }}'
             BOOT_JDK=${{ steps.bootjdk.outputs.path }}
