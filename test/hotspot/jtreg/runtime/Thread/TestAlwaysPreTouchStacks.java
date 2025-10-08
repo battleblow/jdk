@@ -38,7 +38,7 @@ import static jdk.test.lib.Platform.isWindows;
 /*
  * @test id=preTouchTest
  * @summary Test AlwaysPreTouchThreadStacks
- * @requires os.family != "aix"
+ * @requires os.family != "aix" & os.family != "openbsd"
  * @library /test/lib
  * @modules java.base/jdk.internal.misc
  *          java.management
