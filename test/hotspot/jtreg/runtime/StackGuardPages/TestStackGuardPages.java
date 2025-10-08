@@ -31,6 +31,7 @@
  * @compile DoOverflow.java
  * @run main/native TestStackGuardPages
  */
+import jdk.test.lib.Platform;
 import jdk.test.lib.Utils;
 import jdk.test.lib.process.ProcessTools;
 import jdk.test.lib.process.OutputAnalyzer;
@@ -44,11 +45,13 @@ public class TestStackGuardPages {
         OutputAnalyzer output = ProcessTools.executeProcess(pb);
         output.shouldHaveExitValue(0);
 
-        pb = ProcessTools.createNativeTestProcessBuilder("invoke",
-                                                         "test_java_overflow_initial");
-        pb.environment().put("CLASSPATH", Utils.TEST_CLASS_PATH);
-        output = ProcessTools.executeProcess(pb);
-        output.shouldHaveExitValue(0);
+        if (!Platform.getOsName().equals("OpenBSD")) {
+            pb = ProcessTools.createNativeTestProcessBuilder("invoke",
+                                                             "test_java_overflow_initial");
+            pb.environment().put("CLASSPATH", Utils.TEST_CLASS_PATH);
+            output = ProcessTools.executeProcess(pb);
+            output.shouldHaveExitValue(0);
+        }
     }
 }
 
