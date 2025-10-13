@@ -67,32 +67,7 @@ markCloseOnExec(int fd)
     return 0;
 }
 
-#if defined(_BSDONLY_SOURCE)
-/*
- * On BSD we want to avoid relying on having file descriptors mapped to the
- * file system, not all BSDs support it, and it is not mounted by default.
- *
- * Also opendir and readir are not async-signal-safe and can deadlock when
- * called after fork or vfork (but before exec) so on FreeBSD we use the
- * close_range syscall.
- *
- * On other BSD's we just return -1 to fall back to iterating through the
- * file handles manually.
- */
-static int
-markDescriptorsCloseOnExec(void)
-{
-#if defined(__FreeBSD__)
-    // close_range will clamp the upper bound to available file handles
-    // anyways, so just pass UINT_MAX.
-    close_range(STDERR_FILENO + 1, UINT_MAX, CLOSE_RANGE_CLOEXEC);
-    return 0;
-#else
-    return -1;
-#endif
-}
-#else
-#if !defined(_AIX)
+#if !defined(__linux__)
   /* The /proc file system on AIX does not contain open system files
    * like /dev/random. Therefore we use a different approach and do
    * not need isAsciiDigit() or FD_DIR */
@@ -102,13 +77,8 @@ isAsciiDigit(char c)
   return c >= '0' && c <= '9';
 }
 
-  #if defined(_ALLBSD_SOURCE)
-    #define FD_DIR "/dev/fd"
-  #else
-    #define FD_DIR "/proc/self/fd"
-  #endif
-#endif
-
+  #define FD_DIR "/proc/self/fd"
+#endif // __linux__
 static int
 markDescriptorsCloseOnExec(void)
 {
@@ -124,7 +94,27 @@ markDescriptorsCloseOnExec(void)
         (markCloseOnExec(FAIL_FILENO) == -1 && errno != EBADF)) {
         return -1;
     }
-#else
+#elif defined(_BSDONLY_SOURCE)
+    /*
+     * On BSD we want to avoid relying on having file descriptors mapped to the
+     * file system, not all BSDs support it, and it is not mounted by default.
+     *
+     * Also opendir and readir are not async-signal-safe and can deadlock when
+     * called after fork or vfork (but before exec) so on FreeBSD we use the
+     * close_range syscall.
+     *
+     * On other BSD's we just return -1 to fall back to iterating through the
+     * file handles manually.
+     */
+# if defined(__FreeBSD__)
+    // close_range will clamp the upper bound to available file handles
+    // anyways, so just pass UINT_MAX.
+    close_range(STDERR_FILENO + 1, UINT_MAX, CLOSE_RANGE_CLOEXEC);
+    return 0;
+# else
+    return -1;
+# endif
+#else // !AIX && !_BSDONLY_SOURCE
     DIR *dp;
     struct dirent *dirp;
     /* This function marks all file descriptors beyond stderr as CLOEXEC.
@@ -407,7 +397,7 @@ childProcess(void *arg)
     jtregSimulateCrash(0, 6);
 #endif
     /* Close the parent sides of the pipes.
-       Closing pipe fds here is redundant, since closeDescriptors()
+       Closing pipe fds here is redundant, since markDescriptorsCloseOnExec()
        would do it anyways, but a little paranoia is a good thing. */
     if ((closeSafely(p->in[1])   == -1) ||
         (closeSafely(p->out[0])  == -1) ||
@@ -441,6 +431,10 @@ childProcess(void *arg)
     /* We moved the fail pipe fd */
     fail_pipe_fd = FAIL_FILENO;
 
+    /* For AIX: The code in markDescriptorsCloseOnExec() relies on the current
+     * semantic of this function. When this point here is reached only the
+     * FDs 0,1,2 and 3 are further used until the exec() or the exit(-1). */
+
     /* close everything */
     if (markDescriptorsCloseOnExec() == -1) { /* failed,  close the old way */
         int max_fd = (int)sysconf(_SC_OPEN_MAX);
@@ -459,6 +453,11 @@ childProcess(void *arg)
         sigset_t unblock_signals;
         sigemptyset(&unblock_signals);
         sigprocmask(SIG_SETMASK, &unblock_signals, NULL);
+    }
+
+    // Children should be started with default signal disposition for SIGPIPE
+    if (signal(SIGPIPE, SIG_DFL) == SIG_ERR) {
+        goto WhyCantJohnnyExec;
     }
 
     JDK_execvpe(p->mode, p->argv[0], p->argv, p->envv);
