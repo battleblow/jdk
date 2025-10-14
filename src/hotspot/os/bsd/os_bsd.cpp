@@ -252,14 +252,14 @@ bool os::total_swap_space(physical_memory_size_type& value) {
   value = static_cast<physical_memory_size_type>(vmusage.xsu_total);
   return true;
 #elif defined(__FreeBSD__)
-  jlong page_size = sysconf(_SC_PAGESIZE);
+  long page_size = sysconf(_SC_PAGESIZE);
   if (page_size == -1) {
     return false;
   }
 
   struct xswdev xsw;
   size_t mibsize, size;
-  jlong npages;
+  long npages;
   int mib[16], n;
   mibsize = sizeof(mib) / sizeof(mib[0]);
   if (sysctlnametomib("vm.swap_info", mib, &mibsize) == -1) {
@@ -289,14 +289,14 @@ bool os::free_swap_space(physical_memory_size_type& value) {
   value = static_cast<physical_memory_size_type>(vmusage.xsu_avail);
   return true;
 #elif defined(__FreeBSD__)
-  jlong page_size = sysconf(_SC_PAGESIZE);
+  long page_size = sysconf(_SC_PAGESIZE);
   if (page_size == -1) {
     return false;
   }
 
   struct xswdev xsw;
   size_t mibsize, size;
-  jlong npages;
+  long npages;
   int mib[16], n;
   mibsize = sizeof(mib) / sizeof(mib[0]);
   if (sysctlnametomib("vm.swap_info", mib, &mibsize) == -1) {
@@ -1690,7 +1690,7 @@ void os::get_summary_cpu_info(char* buf, size_t buflen) {
   os::snprintf_checked(buf, buflen, "\"%s\" %s %d MHz", model, machine, mhz);
 #endif // !ZERO
 #else // __APPLE__
-  os::snprintf_checked(buf, buflen, "%s %s", model, machine);
+  os::snprintf_checked(buf, buflen, "\"%s\" %s", model, machine);
 #endif // __APPLE__
 }
 
