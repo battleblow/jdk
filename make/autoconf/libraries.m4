@@ -132,9 +132,7 @@ AC_DEFUN_ONCE([LIB_SETUP_LIBRARIES],
   fi
 
   # Threading library
-  if test "x$OPENJDK_TARGET_OS" = xlinux || test "x$OPENJDK_TARGET_OS" = xaix; then
-    BASIC_JVM_LIBS="$BASIC_JVM_LIBS $LIBPTHREAD"
-  elif test "x$OPENJDK_TARGET_OS" = xbsd; then
+  if test "x$OPENJDK_TARGET_OS" = xlinux || test "x$OPENJDK_TARGET_OS" = xaix || test "x$OPENJDK_TARGET_OS" = xbsd; then
     BASIC_JVM_LIBS="$BASIC_JVM_LIBS $LIBPTHREAD"
   fi
 
