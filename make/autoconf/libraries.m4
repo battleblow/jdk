@@ -75,7 +75,7 @@ AC_DEFUN_ONCE([LIB_DETERMINE_DEPENDENCIES],
   fi
 
   # Check if alsa is needed
-  if test "x$OPENJDK_TARGET_OS" = xlinux -o "x$OPENJDK_TARGET_OS_ENV" = xbsd.freebsd -o "x$OPENJDK_TARGET_OS_ENV" = xbsd.netbsd; then
+  if test "x$OPENJDK_TARGET_OS" = xlinux || test "x$OPENJDK_TARGET_OS_ENV" = xbsd.freebsd || test "x$OPENJDK_TARGET_OS_ENV" = xbsd.netbsd; then
     NEEDS_LIB_ALSA=true
   else
     NEEDS_LIB_ALSA=false
@@ -132,18 +132,12 @@ AC_DEFUN_ONCE([LIB_SETUP_LIBRARIES],
   fi
 
   # Threading library
-  if test "x$OPENJDK_TARGET_OS" = xlinux || test "x$OPENJDK_TARGET_OS" = xaix; then
-    BASIC_JVM_LIBS="$BASIC_JVM_LIBS $LIBPTHREAD"
-  elif test "x$OPENJDK_TARGET_OS" = xbsd; then
+  if test "x$OPENJDK_TARGET_OS" = xlinux || test "x$OPENJDK_TARGET_OS" = xaix || test "x$OPENJDK_TARGET_OS" = xbsd; then
     BASIC_JVM_LIBS="$BASIC_JVM_LIBS $LIBPTHREAD"
   fi
 
-  # librt for legacy clock_gettime
+  # librt - for timers (timer_* functions)
   if test "x$OPENJDK_TARGET_OS" = xlinux; then
-    # Hotspot needs to link librt to get the clock_* functions.
-    # But once our supported minimum build and runtime platform
-    # has glibc 2.17, this can be removed as the functions are
-    # in libc.
     BASIC_JVM_LIBS="$BASIC_JVM_LIBS -lrt"
   fi
 

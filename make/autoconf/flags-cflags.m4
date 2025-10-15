@@ -37,56 +37,25 @@ AC_DEFUN([FLAGS_SETUP_SHARED_LIBS],
   if test "x$TOOLCHAIN_TYPE" = xgcc; then
     # Default works for linux, might work on other platforms as well.
     SHARED_LIBRARY_FLAGS='-shared'
-    # --disable-new-dtags forces use of RPATH instead of RUNPATH for rpaths.
-    # This protects internal library dependencies within the JDK from being
-    # overridden using LD_LIBRARY_PATH. See JDK-8326891 for more information.
-    SET_EXECUTABLE_ORIGIN='-Wl,-rpath,\$$ORIGIN[$]1 -Wl,--disable-new-dtags'
-    SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
-    SET_SHARED_LIBRARY_NAME='-Wl,-soname=[$]1'
 
   elif test "x$TOOLCHAIN_TYPE" = xclang; then
     if test "x$OPENJDK_TARGET_OS" = xmacosx; then
       # Linking is different on MacOSX
       SHARED_LIBRARY_FLAGS="-dynamiclib -compatibility_version 1.0.0 -current_version 1.0.0"
-      SET_EXECUTABLE_ORIGIN='-Wl,-rpath,@loader_path$(or [$]1,/.)'
-      SET_SHARED_LIBRARY_ORIGIN="$SET_EXECUTABLE_ORIGIN"
-      SET_SHARED_LIBRARY_NAME='-Wl,-install_name,@rpath/[$]1'
 
     elif test "x$OPENJDK_TARGET_OS" = xaix; then
       # Linking is different on aix
       SHARED_LIBRARY_FLAGS="-shared -Wl,-bM:SRE -Wl,-bnoentry"
-      SET_EXECUTABLE_ORIGIN=""
-      SET_SHARED_LIBRARY_ORIGIN=''
-      SET_SHARED_LIBRARY_NAME=''
 
     else
       # Default works for linux, might work on other platforms as well.
       SHARED_LIBRARY_FLAGS='-shared'
-      SET_EXECUTABLE_ORIGIN='-Wl,-rpath,\$$ORIGIN[$]1'
-      if test "x$OPENJDK_TARGET_OS" = xlinux; then
-        SET_EXECUTABLE_ORIGIN="$SET_EXECUTABLE_ORIGIN -Wl,--disable-new-dtags"
-      fi
-      SET_SHARED_LIBRARY_NAME='-Wl,-soname=[$]1'
-
-      # arm specific settings
-      if test "x$OPENJDK_TARGET_CPU" = "xarm"; then
-        # '-Wl,-z,origin' isn't used on arm.
-        SET_SHARED_LIBRARY_ORIGIN='-Wl,-rpath,\$$$$ORIGIN[$]1'
-      else
-        SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
-      fi
     fi
 
   elif test "x$TOOLCHAIN_TYPE" = xmicrosoft; then
     SHARED_LIBRARY_FLAGS="-dll"
-    SET_EXECUTABLE_ORIGIN=''
-    SET_SHARED_LIBRARY_ORIGIN=''
-    SET_SHARED_LIBRARY_NAME=''
   fi
 
-  AC_SUBST(SET_EXECUTABLE_ORIGIN)
-  AC_SUBST(SET_SHARED_LIBRARY_ORIGIN)
-  AC_SUBST(SET_SHARED_LIBRARY_NAME)
   AC_SUBST(SHARED_LIBRARY_FLAGS)
 ])
 
@@ -555,7 +524,7 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_HELPER],
     # works for all platforms.
     TOOLCHAIN_CFLAGS_JVM="$TOOLCHAIN_CFLAGS_JVM -mno-omit-leaf-frame-pointer -mstack-alignment=16"
 
-    if test "x$OPENJDK_TARGET_OS" = xlinux; then
+    if test "x$OPENJDK_TARGET_OS" = xlinux || test "x$OPENJDK_TARGET_OS" = xbsd; then
       if test "x$DEBUG_LEVEL" = xrelease; then
         # Clang does not inline as much as GCC does for functions with "inline" keyword by default.
         # This causes noticeable slowdown in pause time for G1, and possibly in other areas.
@@ -564,15 +533,6 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_HELPER],
       fi
       TOOLCHAIN_CFLAGS_JDK="-pipe"
       TOOLCHAIN_CFLAGS_JDK_CONLY="-fno-strict-aliasing" # technically NOT for CXX
-    elif test "x$OPENJDK_TARGET_OS" = xbsd; then
-      TOOLCHAIN_CFLAGS_JDK="-pipe"
-      TOOLCHAIN_CFLAGS_JDK_CONLY="-fno-strict-aliasing" # technically NOT for CXX
-
-      FLAGS_CXX_COMPILER_CHECK_ARGUMENTS(ARGUMENT: [$CXXSTD_CXXFLAG -Werror],
-                                                    IF_FALSE: [CXXSTD_CXXFLAG=""])
-      TOOLCHAIN_CFLAGS_JDK_CXXONLY="$CXXSTD_CXXFLAG"
-      TOOLCHAIN_CFLAGS_JVM="$TOOLCHAIN_CFLAGS_JVM $CXXSTD_CXXFLAG"
-      ADLC_CXXFLAG="$CXXSTD_CXXFLAG"
     fi
 
     if test "x$OPENJDK_TARGET_OS" = xaix; then
@@ -611,11 +571,11 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_HELPER],
 
   # CXXFLAGS C++ language level for all of JDK, including Hotspot.
   if test "x$TOOLCHAIN_TYPE" = xgcc || test "x$TOOLCHAIN_TYPE" = xclang; then
-    LANGSTD_CXXFLAGS="-std=c++14"
+    LANGSTD_CXXFLAGS="-std=c++17"
   elif test "x$TOOLCHAIN_TYPE" = xmicrosoft; then
-    LANGSTD_CXXFLAGS="-std:c++14"
+    LANGSTD_CXXFLAGS="-std:c++17"
   else
-    AC_MSG_ERROR([Cannot enable C++14 for this toolchain])
+    AC_MSG_ERROR([Cannot enable C++17 for this toolchain])
   fi
   TOOLCHAIN_CFLAGS_JDK_CXXONLY="$TOOLCHAIN_CFLAGS_JDK_CXXONLY $LANGSTD_CXXFLAGS"
   TOOLCHAIN_CFLAGS_JVM="$TOOLCHAIN_CFLAGS_JVM $LANGSTD_CXXFLAGS"
@@ -771,7 +731,7 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_CPU_DEP],
     fi
 
   elif test "x$TOOLCHAIN_TYPE" = xclang; then
-    if test "x$FLAGS_OS" = xlinux; then
+    if test "x$FLAGS_OS" = xlinux || test "x$OPENJDK_TARGET_OS_ENV" = xbsd.freebsd; then
       # ppc test not really needed for clang
       if test "x$FLAGS_CPU_ARCH" != xarm &&  test "x$FLAGS_CPU_ARCH" != xppc; then
         # for all archs except arm and ppc, prevent gcc to omit frame pointer
@@ -782,14 +742,6 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_CPU_DEP],
         # Use Power8, this is the first CPU to support PPC64 LE with ELFv2 ABI.
         $1_CFLAGS_CPU_JVM="${$1_CFLAGS_CPU_JVM} -DABI_ELFv2 -mcpu=power8 -mtune=power10"
       fi
-    elif test "x$OPENJDK_TARGET_OS_ENV" = xbsd.freebsd; then
-        if test "x$FLAGS_CPU" = xppc64; then
-            $1_CFLAGS_CPU_JVM="${$1_CFLAGS_CPU_JVM} -DABI_ELFv2 -mcpu=powerpc64 -mtune=power5"
-        elif test "x$FLAGS_CPU" = xppc64le; then
-            # Little endian machine uses ELFv2 ABI.
-            # Use Power8, this is the first CPU to support PPC64 LE with ELFv2 ABI.
-            $1_CFLAGS_CPU_JVM="${$1_CFLAGS_CPU_JVM} -DABI_ELFv2 -mcpu=power8 -mtune=power10"
-        fi
     fi
     if test "x$OPENJDK_TARGET_OS" = xaix; then
       $1_CFLAGS_CPU="-mcpu=pwr8"
@@ -804,10 +756,6 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_CPU_DEP],
         # non-release builds.
         $1_CFLAGS_CPU_JVM="-homeparams"
       fi
-    elif test "x$OPENJDK_TARGET_OS_ENV" = xbsd.freebsd; then
-        if test "x$FLAGS_CPU" = xppc64; then
-            $1_CFLAGS_CPU_JVM="${$1_CFLAGS_CPU_JVM} -DABI_ELFv2 -mcpu=powerpc64 -mtune=power5"
-        fi
     fi
   fi
 
@@ -960,37 +908,6 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_CPU_DEP],
         IF_FALSE: [$2FDLIBM_CFLAGS=""])
   fi
   AC_SUBST($2FDLIBM_CFLAGS)
-
-  # Check whether the compiler supports the Arm C Language Extensions (ACLE)
-  # for SVE. Set SVE_CFLAGS to -march=armv8-a+sve if it does.
-  # ACLE and this flag are required to build the aarch64 SVE related functions in
-  # libvectormath. Apple Silicon does not support SVE; use macOS as a proxy for
-  # that check.
-  if test "x$OPENJDK_TARGET_CPU" = "xaarch64" && test "x$OPENJDK_TARGET_CPU" = "xlinux"; then
-    if test "x$TOOLCHAIN_TYPE" = xgcc || test "x$TOOLCHAIN_TYPE" = xclang; then
-      AC_LANG_PUSH(C)
-      OLD_CFLAGS="$CFLAGS"
-      CFLAGS="$CFLAGS -march=armv8-a+sve"
-      AC_MSG_CHECKING([if Arm SVE ACLE is supported])
-      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <arm_sve.h>],
-          [
-            svint32_t r = svdup_n_s32(1);
-            return 0;
-          ])],
-          [
-            AC_MSG_RESULT([yes])
-            $2SVE_CFLAGS="-march=armv8-a+sve"
-          ],
-          [
-            AC_MSG_RESULT([no])
-            $2SVE_CFLAGS=""
-          ]
-      )
-      CFLAGS="$OLD_CFLAGS"
-      AC_LANG_POP(C)
-    fi
-  fi
-  AC_SUBST($2SVE_CFLAGS)
 ])
 
 AC_DEFUN_ONCE([FLAGS_SETUP_BRANCH_PROTECTION],
