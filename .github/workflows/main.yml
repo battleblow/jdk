@@ -26,6 +26,9 @@
 name: 'OpenJDK GHA Sanity Checks'
 
 on:
+  pull_request:
+    branches:
+      - bsd-port
   push:
     branches-ignore:
       - pr/*
