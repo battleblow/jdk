@@ -545,7 +545,6 @@ jobs:
       vm-arch: x86_64
       dry-run: ${{ needs.prepare.outputs.dry-run == 'true' }}
       debug-suffix: -debug
-    if: github.event_name != 'push'
 
   test-freebsd-aarch64:
     name: freebsd-aarch64
