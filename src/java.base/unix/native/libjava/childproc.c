@@ -67,7 +67,7 @@ markCloseOnExec(int fd)
     return 0;
 }
 
-#if !defined(__linux__)
+#if !defined(_AIX) && !defined(_BSDONLY_SOURCE)
   /* The /proc file system on AIX does not contain open system files
    * like /dev/random. Therefore we use a different approach and do
    * not need isAsciiDigit() or FD_DIR */
