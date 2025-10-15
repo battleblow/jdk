@@ -100,20 +100,20 @@ markDescriptorsCloseOnExec(void)
      * file system, not all BSDs support it, and it is not mounted by default.
      *
      * Also opendir and readir are not async-signal-safe and can deadlock when
-     * called after fork or vfork (but before exec) so on FreeBSD we use the
-     * close_range syscall.
-     *
-     * On other BSD's we just return -1 to fall back to iterating through the
-     * file handles manually.
+     * called after fork or vfork (but before exec). So follow the same approach
+     * as AIX. Hard close from just after FAIL_FILENO and set FAIL_FILENO to
+     * close on exec.
      */
 # if defined(__FreeBSD__)
-    // close_range will clamp the upper bound to available file handles
-    // anyways, so just pass UINT_MAX.
-    close_range(STDERR_FILENO + 1, UINT_MAX, CLOSE_RANGE_CLOEXEC);
-    return 0;
+    closefrom(FAIL_FILENO + 1);
 # else
-    return -1;
+    int err;
+    RESTARTABLE(closefrom(FAIL_FILENO + 1), err);
 # endif
+    if (markCloseOnExec(FAIL_FILENO) == -1 && errno != EBADF) {
+        return -1;
+    }
+    return 0;
 #else // !AIX && !_BSDONLY_SOURCE
     DIR *dp;
     struct dirent *dirp;
