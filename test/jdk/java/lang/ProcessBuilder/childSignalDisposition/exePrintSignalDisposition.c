@@ -67,8 +67,10 @@ int main(int argc, char** argv) {
             printf("default ");
         } else if (handler == (void*)SIG_IGN) {
             printf("ignore ");
+#ifdef SIG_HOLD
         } else if (handler == (void*)SIG_HOLD) {
             printf("hold ");
+#endif
         } else {
             printf("%p ", handler);
         }
