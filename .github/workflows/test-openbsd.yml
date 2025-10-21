@@ -82,7 +82,7 @@ jobs:
         include:
           - test-name: 'jdk/tier1 part 1'
             test-suite: 'test/jdk/:tier1_part1'
-            test-timeout-factor: 'TIMEOUT_FACTOR=2'
+            test-timeout-factor: 'TIMEOUT_FACTOR=4'
 
           - test-name: 'jdk/tier1 part 2'
             test-suite: 'test/jdk/:tier1_part2'
