@@ -195,6 +195,16 @@ else ifeq ($(call isTargetOs, bsd), true)
           #
       BUILD_LIBJVM_memnode.cpp_CXXFLAGS := -O0
     endif
+
+    # retguard interferes with these files leading to SIGTRAP
+    ifeq ($(call isTargetOsEnv, bsd.openbsd), true)
+      JVM_PRECOMPILED_HEADER_EXCLUDE += \
+          c1_Runtime1.cpp \
+          sharedRuntime.cpp \
+          #
+      BUILD_LIBJVM_c1_Runtime1.cpp_CXXFLAGS := -fno-ret-protector
+      BUILD_LIBJVM_sharedRuntime.cpp_CXXFLAGS := -fno-ret-protector
+    endif
   endif
 
 endif
