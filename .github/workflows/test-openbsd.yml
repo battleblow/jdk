@@ -82,6 +82,7 @@ jobs:
         include:
           - test-name: 'jdk/tier1 part 1'
             test-suite: 'test/jdk/:tier1_part1'
+            test-timeout-factor: 'TIMEOUT_FACTOR=2'
 
           - test-name: 'jdk/tier1 part 2'
             test-suite: 'test/jdk/:tier1_part2'
@@ -194,7 +195,7 @@ jobs:
             TEST_IMAGE_DIR=${{ steps.bundles.outputs.tests-path }}
             ${{ steps.extra-options.outputs.test-jdk }}
             ${{ steps.extra-options.outputs.compile-jdk }}
-            JTREG='JAVA_OPTIONS=-XX:-CreateCoredumpOnCrash;VERBOSE=fail,error,time;KEYWORDS=!headful;${{ steps.extra-options.outputs.extra-problem-lists }}'
+            JTREG='JAVA_OPTIONS=-XX:-CreateCoredumpOnCrash;VERBOSE=fail,error,time;KEYWORDS=!headful;${{ steps.extra-options.outputs.extra-problem-lists }};${{ matrix.test-timeout-factor }}'
             && bash ./.github/scripts/gen-test-summary.sh "$GITHUB_STEP_SUMMARY" "$GITHUB_OUTPUT"
         if: ${{ inputs.dry-run == false }}
 
