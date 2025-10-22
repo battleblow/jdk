@@ -338,8 +338,10 @@ void os_getCmdlineAndUserInfo(JNIEnv *env, jobject jinfo, pid_t pid) {
     mib[3] = KERN_PROC_ARGV;
 
     if (sysctl(mib, 4, NULL, &size, NULL, 0) == -1) {
-        JNU_ThrowByNameWithLastError(env,
-            "java/lang/RuntimeException", "sysctl failed");
+        if (errno != EINVAL && errno != ESRCH && errno != EPERM) {
+            JNU_ThrowByNameWithLastError(env,
+                "java/lang/RuntimeException", "sysctl failed");
+        }
         return;
     }
 
@@ -357,7 +359,7 @@ void os_getCmdlineAndUserInfo(JNIEnv *env, jobject jinfo, pid_t pid) {
         jobject argsArray;
 
         if (sysctl(mib, 4, args, &size, NULL, 0) == -1) {
-            if (errno != EINVAL) {
+            if (errno != EINVAL && errno != ESRCH && errno != EPERM) {
                 JNU_ThrowByNameWithLastError(env,
                     "java/lang/RuntimeException", "sysctl failed");
             }
