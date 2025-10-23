@@ -394,7 +394,7 @@ jobs:
       platform: openbsd-x64
       runs-on: ubuntu-24.04
       vm-arch: 'x86_64'
-      vm-release: "7.7"
+      vm-release: "7.8"
       configure-arguments: ${{ github.event.inputs.configure-arguments }}
       make-arguments: ${{ github.event.inputs.make-arguments }}
       dry-run: ${{ needs.prepare.outputs.dry-run == 'true' }}
@@ -408,7 +408,7 @@ jobs:
       platform: openbsd-aarch64
       runs-on: ubuntu-24.04
       vm-arch: 'aarch64'
-      vm-release: "7.7"
+      vm-release: "7.8"
       configure-arguments: ${{ github.event.inputs.configure-arguments }}
       make-arguments: ${{ github.event.inputs.make-arguments }}
       dry-run: ${{ needs.prepare.outputs.dry-run == 'true' }}
@@ -513,7 +513,7 @@ jobs:
     with:
       platform: openbsd-x64
       runs-on: ubuntu-24.04
-      vm-release: 7.7
+      vm-release: 7.8
       vm-arch: x86_64
       dry-run: ${{ needs.prepare.outputs.dry-run == 'true' }}
       debug-suffix: -debug
@@ -527,7 +527,7 @@ jobs:
     with:
       platform: openbsd-aarch64
       runs-on: ubuntu-24.04
-      vm-release: 7.7
+      vm-release: 7.8
       vm-arch: aarch64
       dry-run: ${{ needs.prepare.outputs.dry-run == 'true' }}
       debug-suffix: -debug
