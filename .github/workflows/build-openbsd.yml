@@ -59,11 +59,9 @@ jobs:
       - name: 'Checkout the JDK source'
         uses: actions/checkout@v4
 
-      - name: 'Get the BootJDK'
+      - name: 'Set the BootJDK path'
         id: bootjdk
-        uses: ./.github/actions/get-bootjdk
-        with:
-          platform: ${{ inputs.platform }}
+        run: echo 'path=/usr/local/jdk-25' >> $GITHUB_OUTPUT
 
       - name: 'Get JTReg'
         id: jtreg
@@ -91,7 +89,7 @@ jobs:
       - name: 'Install toolchain and dependencies in VM'
         shell: openbsd {0}
         run: |
-          until pkg_add metaauto autoconf%2.69 gtar-- zip unzip-- cups-libs bash ggrep gmake dwz libiconv harfbuzz jpeg lcms2 png giflib; do
+          until pkg_add jdk%25 metaauto autoconf%2.69 gtar-- zip unzip-- cups-libs bash ggrep gmake dwz libiconv harfbuzz jpeg lcms2 png giflib; do
             echo Retrying in 10 seconds; sleep 10;
           done
 
