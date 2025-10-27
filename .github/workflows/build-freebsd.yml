@@ -141,7 +141,6 @@ jobs:
           --with-lcms=system
           --with-harfbuzz=system
           --with-giflib=system
-          --with-giflib=system
           --with-giflib-include=/usr/local/include
           --with-giflib-lib=/usr/local/lib
           --with-alsa=/usr/local
