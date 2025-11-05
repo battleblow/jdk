@@ -86,7 +86,7 @@ jobs:
 
       - name: 'Set the BootJDK path'
         id: bootjdk
-        run: echo 'path=/usr/local/openjdk24' >> $GITHUB_OUTPUT
+        run: echo 'path=/usr/local/openjdk25' >> $GITHUB_OUTPUT
 
       - name: 'Get JTReg'
         id: jtreg
@@ -113,7 +113,7 @@ jobs:
       - name: 'Install toolchain and dependencies in VM'
         shell: freebsd {0}
         run: >
-          pkg install -y openjdk24 autoconf automake pkgconf gnugrep gtar zip unzip cups bash gmake dwz libiconv harfbuzz lcms2 png giflib jpeg-turbo gsed
+          pkg install -y openjdk25 autoconf automake pkgconf gnugrep gtar zip unzip cups bash gmake dwz libiconv harfbuzz lcms2 png giflib jpeg-turbo gsed
 
       - name: 'Configure in VM'
         shell: freebsd {0}
