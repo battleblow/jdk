@@ -91,9 +91,7 @@ char* os::non_memory_address_word() {
 
 address os::Posix::ucontext_get_pc(const ucontext_t* uc) {
   if (DecodeErrorContext) {
-#if defined(IA32)
-    return (address)uc->uc_mcontext.mc_eip;
-#elif defined(AMD64)
+#if defined(AMD64)
     return (address)uc->uc_mcontext.mc_rip;
 #elif defined(AARCH64)
     return (address)uc->uc_mcontext.mc_gpregs.gp_elr;
@@ -116,9 +114,7 @@ void os::Posix::ucontext_set_pc(ucontext_t* uc, address pc) {
 
 intptr_t* os::Bsd::ucontext_get_sp(const ucontext_t* uc) {
   if (DecodeErrorContext) {
-#if defined(IA32)
-    return (intptr_t*)uc->uc_mcontext.mc_esp;
-#elif defined(AMD64)
+#if defined(AMD64)
     return (intptr_t*)uc->uc_mcontext.mc_rsp;
 #elif defined(AARCH64)
     return (intptr_t*)uc->uc_mcontext.mc_gpregs.gp_sp;
@@ -137,9 +133,7 @@ intptr_t* os::Bsd::ucontext_get_sp(const ucontext_t* uc) {
 
 intptr_t* os::Bsd::ucontext_get_fp(const ucontext_t* uc) {
   if (DecodeErrorContext) {
-#if defined(IA32)
-    return (intptr_t*)uc->uc_mcontext.mc_ebp;
-#elif defined(AMD64)
+#if defined(AMD64)
     return (intptr_t*)uc->uc_mcontext.mc_rbp;
 #elif defined(AARCH64)
     return (intptr_t*)uc->uc_mcontext.mc_gpregs.gp_x[REG_FP];
