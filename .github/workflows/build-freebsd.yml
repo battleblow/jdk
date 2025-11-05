@@ -113,6 +113,9 @@ jobs:
       - name: 'Install toolchain and dependencies in VM'
         shell: freebsd {0}
         run: >
+          mkdir -p /usr/local/etc/pkg/repos &&
+          echo 'FreeBSD: { url: "pkg+https://pkg.FreeBSD.org/${ABI}/latest" }' > /usr/local/etc/pkg/repos/FreeBSD.conf &&
+          pkg update -f -q &&
           pkg install -y openjdk25 autoconf automake pkgconf gnugrep gtar zip unzip cups bash gmake dwz libiconv harfbuzz lcms2 png giflib jpeg-turbo gsed
 
       - name: 'Configure in VM'
