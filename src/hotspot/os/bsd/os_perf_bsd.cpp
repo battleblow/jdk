@@ -331,7 +331,7 @@ int CPUPerformanceInterface::CPUPerformance::get_cpu_ticks(CPUTicks *ticks, int 
     FREE_C_HEAP_ARRAY(long, allcpus);
 #else
     char name[24];
-    snprintf(name, sizeof(name), "kern.cp_time.%d", which_logical_cpu);
+    os::snprintf_checked(name, sizeof(name), "kern.cp_time.%d", which_logical_cpu);
     if (sysctlbyname(name, &cpu_load_info, &length, nullptr, 0) == -1) {
       return OS_ERR;
     }
