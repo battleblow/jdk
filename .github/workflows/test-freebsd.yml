@@ -130,7 +130,7 @@ jobs:
 
       - name: 'Set the BootJDK path'
         id: bootjdk
-        run: echo 'path=/usr/local/openjdk24' >> $GITHUB_OUTPUT
+        run: echo 'path=/usr/local/openjdk25' >> $GITHUB_OUTPUT
 
       - name: 'Get JTReg'
         id: jtreg
@@ -177,7 +177,10 @@ jobs:
           usesh: true
           prepare: |
             mount -t procfs proc /proc
-            pkg install -y openjdk24 gnugrep gtar zip unzip cups bash gmake dwz libiconv harfbuzz lcms2 png giflib jpeg-turbo gsed
+            mkdir -p /usr/local/etc/pkg/repos
+            echo 'FreeBSD: { url: "pkg+https://pkg.FreeBSD.org/${ABI}/latest" }' > /usr/local/etc/pkg/repos/FreeBSD.conf
+            pkg update -f -q
+            pkg install -y openjdk25 gnugrep gtar zip unzip cups bash gmake dwz libiconv harfbuzz lcms2 png giflib jpeg-turbo gsed
           run: >
             gmake test-prebuilt
             SED=/usr/local/bin/gsed
