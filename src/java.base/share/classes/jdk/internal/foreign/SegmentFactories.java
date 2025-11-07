@@ -200,26 +200,14 @@ public class SegmentFactories {
         // non-zero addresses.
         alignedSize = Math.max(1, alignedSize);
 
-        long allocationSize;
-        long allocationBase;
-        long result;
-        if (byteAlignment > MAX_MALLOC_ALIGN) {
-            allocationSize = alignedSize + byteAlignment - MAX_MALLOC_ALIGN;
-            if (shouldReserve) {
-                AbstractMemorySegmentImpl.NIO_ACCESS.reserveMemory(allocationSize, byteSize);
-            }
+        long allocationSize = alignedSize + byteAlignment - (byteAlignment > MAX_MALLOC_ALIGN ? MAX_MALLOC_ALIGN : 0);
 
-            allocationBase = allocateMemoryWrapper(allocationSize);
-            result = Utils.alignUp(allocationBase, byteAlignment);
-        } else {
-            allocationSize = alignedSize;
-            if (shouldReserve) {
-                AbstractMemorySegmentImpl.NIO_ACCESS.reserveMemory(allocationSize, byteSize);
-            }
-
-            allocationBase = allocateMemoryWrapper(allocationSize);
-            result = allocationBase;
+        if (shouldReserve) {
+            AbstractMemorySegmentImpl.NIO_ACCESS.reserveMemory(allocationSize, byteSize);
         }
+
+        long allocationBase = allocateMemoryWrapper(allocationSize);
+        long result = Utils.alignUp(allocationBase, byteAlignment);
 
         if (init) {
             initNativeMemory(result, alignedSize);
