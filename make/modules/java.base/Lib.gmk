@@ -159,8 +159,8 @@ endif
 ## Build libsyslookup
 ## The LIBDL dependency on Linux is needed to dynamically access libdl symbols,
 ## which may be needed as part of resolving some standard symbols
-## The BSDLIBC depenency on OpenBSD is needed to access libc symbols. On OpenBSD
-## libc is not added by default to shared libraries.
+## The BSDLIBC dependency on OpenBSD is needed to access libc symbols. On
+## OpenBSD libc is not added by default to shared libraries.
 ################################################################################
 
 ifeq ($(OPENJDK_TARGET_OS_ENV), bsd.openbsd)
