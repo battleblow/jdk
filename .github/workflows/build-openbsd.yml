@@ -107,6 +107,13 @@ jobs:
         id: gtest
         uses: ./.github/actions/get-gtest
 
+      - name: 'Restore Cached VM Packages'
+        id: vm-packages-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: /home/runner/work/obsd-pkg-cache
+          key: ${{ inputs.platform }}-${{ inputs.vm-release }}-${{ inputs.vm-arch }}-packages
+
       - name: 'Start OpenBSD VM'
         uses: vmactions/openbsd-vm@v1
         with:
@@ -125,6 +132,9 @@ jobs:
       - name: 'Install toolchain and dependencies in VM'
         shell: openbsd {0}
         run: |
+          export PKG_CACHE='/home/runner/work/obsd-pkg-cache'
+          mkdir -p ${PKG_CACHE}
+          export PKG_PATH="${PKG_CACHE}:https://cdn.openbsd.org/%m"
           until pkg_add jdk%25 metaauto autoconf%2.69 gtar-- zip unzip-- cups-libs bash ggrep gmake dwz libiconv harfbuzz jpeg lcms2 png giflib; do
             echo Retrying in 10 seconds; sleep 10;
           done
@@ -178,6 +188,13 @@ jobs:
           echo
           echo "Available storage:"
           sudo df -h
+
+      - name: 'Save VM Packages'
+        uses: actions/cache/save@v4
+        with:
+          path: /home/runner/work/obsd-pkg-cache
+          key: ${{ steps.vm-packages-cache.outputs.cache-primary-key }}
+        if: ${{ matrix.debug-level == 'release' }}
 
       - name: 'Upload bundles'
         uses: ./.github/actions/upload-bundles
