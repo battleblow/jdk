@@ -178,6 +178,13 @@ jobs:
             echo "extra-problem-lists=EXTRA_PROBLEM_LISTS=${{ steps.path.outputs.static-hotspot-problemlist-path }}%20${{ steps.path.outputs.static-jdk-problemlist-path }}%20${{ steps.path.outputs.static-langtools-problemlist-path }}%20${{ steps.path.outputs.static-lib-test-problemlist-path }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Restore Cached VM Packages
+        id: vm-packages-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: /home/runner/work/obsd-pkg-cache
+          key: ${{ inputs.platform }}-${{ inputs.vm-release }}-${{ inputs.vm-arch }}-packages
+
       - name: 'Run Tests in OpenBSD VM'
         id: run-tests
         uses: vmactions/openbsd-vm@v1
@@ -191,6 +198,9 @@ jobs:
           prepare: |
             mount -u -o wxallowed /home
             usermod -L pbuild root
+            export PKG_CACHE=/home/runner/work/obsd-pkg-cache
+            mkdir -p ${PKG_CACHE}
+            export PKG_PATH="${PKG_CACHE}:https://cdn.openbsd.org/%m"
             until pkg_add jdk%25 gtar-- zip unzip-- cups-libs bash ggrep gmake dwz libiconv harfbuzz jpeg lcms2 png giflib; do
               echo Retrying in 10 seconds; sleep 10;
             done
