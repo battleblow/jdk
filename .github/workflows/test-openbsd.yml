@@ -182,8 +182,8 @@ jobs:
         id: vm-packages-cache
         uses: actions/cache/restore@v4
         with:
-          path: /home/runner/work/obsd-pkg-cache
-          key: ${{ inputs.platform }}-${{ inputs.vm-release }}-${{ inputs.vm-arch }}-packages
+          path: obsd-pkg-cache
+          key: packages-${{ inputs.platform }}-${{ inputs.vm-release }}-${{ inputs.vm-arch }}-${{ hashFiles('./obsd-pkg-cache/*.tgz') }}
 
       - name: 'Run Tests in OpenBSD VM'
         id: run-tests
@@ -198,7 +198,7 @@ jobs:
           prepare: |
             mount -u -o wxallowed /home
             usermod -L pbuild root
-            export PKG_CACHE=/home/runner/work/obsd-pkg-cache
+            export PKG_CACHE=$GITHUB_WORKSPACE/obsd-pkg-cache
             mkdir -p ${PKG_CACHE}
             export PKG_PATH="${PKG_CACHE}:https://cdn.openbsd.org/%m"
             until pkg_add jdk%25 gtar-- zip unzip-- cups-libs bash ggrep gmake dwz libiconv harfbuzz jpeg lcms2 png giflib; do
