@@ -2381,7 +2381,9 @@ void os::set_native_thread_name(const char *name) {
     (void) os::snprintf(buf, sizeof(buf), "Java: %s", name);
     pthread_setname_np(buf);
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
-    pthread_set_name_np(pthread_self(), name);
+    char buf[MAXCOMLEN+1];
+    (void) os::snprintf(buf, sizeof(buf), "%s", name);
+    pthread_set_name_np(pthread_self(), buf);
 #elif defined(__NetBSD__)
     pthread_setname_np(pthread_self(), "%s", const_cast<char *>(name));
 #endif
