@@ -33,6 +33,7 @@
 #if !defined(__NetBSD__)
 #include <sys/user.h>
 #endif
+#include <ctype.h>
 #include <unistd.h>
 
 #include "jvm.h"
@@ -189,7 +190,7 @@ JNIEXPORT jlong JNICALL
 Java_com_sun_management_internal_OperatingSystemImpl_getCommittedVirtualMemorySize0
   (JNIEnv *env, jobject mbean)
 {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1402000
   rlim_t vmm_usage;
 
   int result = getrlimitusage(RLIMIT_AS, 0, &vmm_usage);
@@ -209,7 +210,7 @@ JNIEXPORT jlong JNICALL
 Java_com_sun_management_internal_OperatingSystemImpl_getOpenFileDescriptorCount0
   (JNIEnv *env, jobject mbean)
 {
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1402000
     rlim_t nfiles;
 
     int result = getrlimitusage(RLIMIT_NOFILE, 0, &nfiles);
