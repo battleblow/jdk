@@ -419,7 +419,7 @@ lookup_cpu(int &_cpu, int &_model, int &_variant, int &_revision) {
   const struct cpu_parts *cpu_partsp = nullptr;
   size_t i;
 
-  if (sysctl(mib, nitems(mib), &descr, &descr_len, NULL, 0) == -1)
+  if (sysctl(mib, nitems(mib), &descr, &descr_len, nullptr, 0) == -1)
     return;
 
   for (i = 0; i < nitems(cpu_implementers); i++) {
