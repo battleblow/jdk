@@ -34,6 +34,9 @@ void VM_Version::get_compatible_board(char *buf, int buflen) {
   *buf = '\0';
 }
 
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+
 int VM_Version::get_current_sve_vector_length() {
   ShouldNotCallThis();
   return -1;
@@ -43,9 +46,6 @@ int VM_Version::set_and_get_current_sve_vector_length(int length) {
   ShouldNotCallThis();
   return -1;
 }
-
-#ifdef __APPLE__
-#include <sys/sysctl.h>
 
 static bool cpu_has(const char* optional) {
   uint32_t val;
@@ -150,6 +150,19 @@ bool VM_Version::is_cpu_emulated() {
 #define	CPU_PART(midr)	(((midr) >> 4) & 0xfff)
 #define	CPU_VAR(midr)	(((midr) >> 20) & 0xf)
 #define	CPU_REV(midr)	(((midr) >> 0) & 0xf)
+
+// XXX: FreeBSD 15+ has sysarch(2) w/ARM64_GET_SVE_VL but the man page
+// says not to call sysarch(2) directly. A libsys function is not yet
+// available. When it does become available FreeBSD can call it instead
+// of using the minimum (128 bits/16 bytes) in the following two functions.
+
+int VM_Version::get_current_sve_vector_length() {
+  return FloatRegister::sve_vl_min;
+}
+
+int VM_Version::set_and_get_current_sve_vector_length(int length) {
+  return FloatRegister::sve_vl_min;
+}
 
 #ifdef __OpenBSD__
 // For older processors on OpenBSD READ_SPECIALREG is not supported.
@@ -465,6 +478,8 @@ void VM_Version::get_os_cpu_info() {
 
   /*
    * Step 1: setup _features using elf_aux_info(3). Keep in sync with Linux.
+   * Note however we include a work-around for CPUs that report SVE2 without
+   * supporting SVE, by only allowing SVE2 when SVE is also reported as available.
    */
   unsigned long auxv = 0;
   unsigned long auxv2 = 0;
@@ -506,11 +521,14 @@ void VM_Version::get_os_cpu_info() {
       HWCAP_FPHP    |
       HWCAP_ASIMDHP);
 
-  if (auxv2 & HWCAP2_SVE2) {
-    set_feature(CPU_SVE2);
-  }
-  if (auxv2 & HWCAP2_SVEBITPERM) {
-    set_feature(CPU_SVEBITPERM);
+  // Only allow SVE2 features if SVE is also available
+  if (auxv & HWCAP_SVE) {
+    if (auxv2 & HWCAP2_SVE2) {
+      set_feature(CPU_SVE2);
+    }
+    if (auxv2 & HWCAP2_SVEBITPERM) {
+      set_feature(CPU_SVEBITPERM);
+    }
   }
 
   /*
