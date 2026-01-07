@@ -478,8 +478,10 @@ void VM_Version::get_os_cpu_info() {
 
   /*
    * Step 1: setup _features using elf_aux_info(3). Keep in sync with Linux.
-   * Note however we include a work-around for CPUs that report SVE2 without
-   * supporting SVE, by only allowing SVE2 when SVE is also reported as available.
+   * Some CPU's (Apple's M4) implement SME, but not SVE. Those CPUs report
+   * SVE2 support without reporting support for SVE. To ensure we don't
+   * assume SVE support for those CPUs we only enable SVE2 features if SVE
+   * is also supported.
    */
   unsigned long auxv = 0;
   unsigned long auxv2 = 0;
