@@ -11727,7 +11727,7 @@ class StubGenerator: public StubCodeGenerator {
     StubRoutines::_upcall_stub_exception_handler = generate_upcall_stub_exception_handler();
     StubRoutines::_upcall_stub_load_target = generate_upcall_stub_load_target();
 
-#if (defined (LINUX) || defined(_BSDONLY_SOURCE) && !defined (__ARM_FEATURE_ATOMICS))
+#if (defined (LINUX) || defined(_BSDONLY_SOURCE)) && !defined (__ARM_FEATURE_ATOMICS)
 
     generate_atomic_entry_points();
 
