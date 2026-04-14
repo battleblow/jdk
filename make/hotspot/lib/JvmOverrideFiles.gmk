@@ -197,7 +197,7 @@ else ifeq ($(call isTargetOs, bsd), true)
     endif
 
     # retguard interferes with these files leading to SIGTRAP
-    ifeq ($(call isTargetOsEnv, bsd.openbsd), true)
+    ifeq ($(call isTargetOsEnv, bsd.openbsd)+$(call isTargetCpu, x86_64), true+true)
       JVM_PRECOMPILED_HEADER_EXCLUDE += \
           c1_Runtime1.cpp \
           sharedRuntime.cpp \
