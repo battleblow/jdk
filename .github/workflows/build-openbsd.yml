@@ -155,7 +155,7 @@ jobs:
           --with-zlib=system
           --with-jmod-compress=zip-1
           --with-external-symbols-in-bundles=none
-          --with-debug-info-level=1
+          --with-native-debug-symbols-level=1
           --with-stdc++lib=dynamic
           --with-toolchain-type=clang
           --with-fontconfig=/usr/X11R6
