@@ -144,6 +144,7 @@ jobs:
           --with-gtest=${{ steps.gtest.outputs.path }}
           --with-zlib=system
           --with-jmod-compress=zip-1
+          --with-external-symbols-in-bundles=none
           --with-stdc++lib=dynamic
           --with-toolchain-type=clang
           --with-fontconfig=/usr/local
