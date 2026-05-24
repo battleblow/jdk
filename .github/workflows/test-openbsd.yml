@@ -82,7 +82,6 @@ jobs:
         include:
           - test-name: 'jdk/tier1 part 1'
             test-suite: 'test/jdk/:tier1_part1'
-            test-timeout-factor: 'TIMEOUT_FACTOR=4'
 
           - test-name: 'jdk/tier1 part 2'
             test-suite: 'test/jdk/:tier1_part2'
@@ -119,7 +118,6 @@ jobs:
 
           - test-name: 'hs/tier1 serviceability'
             test-suite: 'test/hotspot/jtreg/:tier1_serviceability'
-            test-timeout-factor: 'TIMEOUT_FACTOR=2'
             debug-suffix: ${{ inputs.debug-suffix }}
 
           - test-name: 'lib-test/tier1'
@@ -209,7 +207,6 @@ jobs:
           run: >
             ulimit -Sd $(ulimit -Hd) &&
             gmake test-prebuilt
-            TEST_JOBS=1
             TEST='${{ matrix.test-suite }}'
             BOOT_JDK=${{ steps.bootjdk.outputs.path }}
             JT_HOME=${{ steps.jtreg.outputs.path }}
@@ -218,7 +215,7 @@ jobs:
             TEST_IMAGE_DIR=${{ steps.bundles.outputs.tests-path }}
             ${{ steps.extra-options.outputs.test-jdk }}
             ${{ steps.extra-options.outputs.compile-jdk }}
-            JTREG='JAVA_OPTIONS=-XX:-CreateCoredumpOnCrash;VERBOSE=fail,error,time;KEYWORDS=!headful;${{ steps.extra-options.outputs.extra-problem-lists }};${{ matrix.test-timeout-factor }}'
+            JTREG='JAVA_OPTIONS=-XX:-CreateCoredumpOnCrash;VERBOSE=fail,error,time;KEYWORDS=!headful;${{ steps.extra-options.outputs.extra-problem-lists }}'
             && bash ./.github/scripts/gen-test-summary.sh "$GITHUB_STEP_SUMMARY" "$GITHUB_OUTPUT"
         if: ${{ inputs.dry-run == false }}
 
