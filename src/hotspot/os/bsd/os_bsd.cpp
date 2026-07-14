@@ -107,16 +107,19 @@
   #include <pthread_np.h>
   #include <sys/link_elf.h>
   #include <vm/vm_param.h>
+  #include <machine/vmparam.h>
 #endif
 
 #ifdef __NetBSD__
-#include <link_elf.h>
-#include <lwp.h>
+  #include <link_elf.h>
+  #include <lwp.h>
+  #include <machine/vmparam.h>
 #endif
 
 #ifdef __OpenBSD__
   #include <pthread_np.h>
   #include <link_elf.h>
+  #include <machine/vmparam.h>
 #endif
 
 #ifdef __APPLE__
@@ -2186,7 +2189,8 @@ size_t os::vm_min_address() {
   return 4 * G;
 #else
   assert(is_aligned(_vm_min_address_default, os::vm_allocation_granularity()), "Sanity");
-  return _vm_min_address_default;
+  assert(is_aligned(VM_MIN_ADDRESS, os::vm_allocation_granularity()), "Sanity");
+  return MAX2(_vm_min_address_default, (size_t)VM_MIN_ADDRESS);
 #endif
 }
 
