@@ -43,12 +43,7 @@ import static sun.nio.fs.UnixNativeDispatcher.*;
 abstract class UnixUserDefinedFileAttributeView
     extends AbstractUserDefinedFileAttributeView
 {
-    enum FileAttributeType {
-        LINUX,
-        BSD
-    };
-
-    private static final Unsafe unsafe = Unsafe.getUnsafe();
+    protected static final Unsafe unsafe = Unsafe.getUnsafe();
 
     private static final JavaNioAccess NIO_ACCESS = SharedSecrets.getJavaNioAccess();
 
@@ -60,22 +55,16 @@ abstract class UnixUserDefinedFileAttributeView
 
     private final UnixPath file;
     private final boolean followLinks;
-    private final FileAttributeType attributeType;
 
     UnixUserDefinedFileAttributeView(UnixPath file, boolean followLinks) {
-        this(file, followLinks, FileAttributeType.LINUX);
-    }
-
-    UnixUserDefinedFileAttributeView(UnixPath file, boolean followLinks, FileAttributeType attributeType) {
         this.file = file;
         this.followLinks = followLinks;
-        this.attributeType = attributeType;
     }
 
     private byte[] nameAsBytes(UnixPath file, String name) throws IOException {
         if (name == null)
             throw new NullPointerException("'name' is null");
-        if (attributeType == FileAttributeType.LINUX) {
+        if (prefixNamespace()) {
             name = USER_NAMESPACE + name;
         }
         byte[] bytes = Util.toBytes(name);
@@ -91,55 +80,48 @@ abstract class UnixUserDefinedFileAttributeView
      */
     protected abstract int maxNameLength();
 
+    protected boolean prefixNamespace() {
+        return true;
+    }
+
     // Parses buffer as array of NULL-terminated C strings.
-    private static List<String> asList(long address, int size, FileAttributeType attributeType) {
+    protected static List<String> asList(long address, int size) {
         List<String> list = new ArrayList<>();
         int start = 0;
         int pos = 0;
-        if (attributeType == FileAttributeType.LINUX) {
-            while (pos < size) {
-                if (unsafe.getByte(address + pos) == 0) {
-                    int len = pos - start;
-                    byte[] value = new byte[len];
-                    unsafe.copyMemory(null, address+start, value,
-                        Unsafe.ARRAY_BYTE_BASE_OFFSET, len);
-                    String s = Util.toString(value);
-                    list.add(s);
-                    start = pos + 1;
-                }
-                pos++;
-            }
-            // Only "user" namespace attributes
-            list = list.stream()
-                    .filter(s -> s.startsWith(USER_NAMESPACE))
-                    .map(s -> s.substring(USER_NAMESPACE.length()))
-                    .toList();
-        } else { // FileAttributeType.BSD
-            while (pos < size) {
-                int len = unsafe.getByte(address + pos) & 0xFF;
-                start = pos + 1;
+
+        while (pos < size) {
+            if (unsafe.getByte(address + pos) == 0) {
+                int len = pos - start;
                 byte[] value = new byte[len];
                 unsafe.copyMemory(null, address+start, value,
                     Unsafe.ARRAY_BYTE_BASE_OFFSET, len);
                 String s = Util.toString(value);
                 list.add(s);
-                pos = start + len;
+                start = pos + 1;
             }
+            pos++;
         }
+
+        // Only "user" namespace attributes
+        list = list.stream()
+                .filter(s -> s.startsWith(USER_NAMESPACE))
+                .map(s -> s.substring(USER_NAMESPACE.length()))
+                .toList();
 
         return list;
     }
 
     // runs flistxattr, increases buffer size up to MAX_LISTXATTR_BUF_SIZE if required
-    private static List<String> list(int fd, int bufSize, FileAttributeType attributeType) throws UnixException {
+    private static List<String> list(int fd, int bufSize) throws UnixException {
         try {
             try (NativeBuffer buffer = NativeBuffers.getNativeBuffer(bufSize)) {
                 int n = flistxattr(fd, buffer.address(), bufSize);
-                return asList(buffer.address(), n, attributeType);
+                return asList(buffer.address(), n);
             } // release buffer before recursion
         } catch (UnixException x) {
             if (x.errno() == ERANGE && bufSize < MAX_LISTXATTR_BUF_SIZE) {
-                return list(fd, bufSize * 2, attributeType); // try larger buffer size:
+                return list(fd, bufSize * 2); // try larger buffer size:
             } else {
                 throw x;
             }
@@ -155,7 +137,7 @@ abstract class UnixUserDefinedFileAttributeView
             x.rethrowAsIOException(file);
         }
         try {
-            return list(fd, MIN_LISTXATTR_BUF_SIZE, attributeType);
+            return list(fd, MIN_LISTXATTR_BUF_SIZE);
         } catch (UnixException x) {
             throw new FileSystemException(file.getPathForExceptionMessage(),
                 null, "Unable to get list of extended attributes: " +
@@ -332,12 +314,8 @@ abstract class UnixUserDefinedFileAttributeView
      *          file descriptor for target file
      */
     static void copyExtendedAttributes(int ofd, int nfd) {
-        copyExtendedAttributes(ofd, nfd, FileAttributeType.LINUX);
-    }
-
-    static void copyExtendedAttributes(int ofd, int nfd, FileAttributeType attributeType) {
         try {
-            List<String> attrNames = list(ofd, MIN_LISTXATTR_BUF_SIZE, attributeType);
+            List<String> attrNames = list(ofd, MIN_LISTXATTR_BUF_SIZE);
             for (String name : attrNames) {
                 try {
                     copyExtendedAttribute(ofd, Util.toBytes(name), nfd);

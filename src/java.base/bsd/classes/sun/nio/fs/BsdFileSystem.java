@@ -67,7 +67,7 @@ class BsdFileSystem extends UnixFileSystem {
 
     @Override
     void copyNonPosixAttributes(int ofd, int nfd) {
-        UnixUserDefinedFileAttributeView.copyExtendedAttributes(ofd, nfd, UnixUserDefinedFileAttributeView.FileAttributeType.BSD);
+        UnixUserDefinedFileAttributeView.copyExtendedAttributes(ofd, nfd);
     }
 
     /**
