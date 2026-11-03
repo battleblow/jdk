@@ -2771,18 +2771,27 @@ jlong os::thread_cpu_time(Thread *thread, bool user_sys_cpu_time) {
   FREE_C_HEAP_ARRAY(ki);
   return -1;
 #else /* !OpenBSD */
-  if (user_sys_cpu_time && Bsd::_getcpuclockid != nullptr) {
+  if (user_sys_cpu_time) {
     struct timespec tp;
-    clockid_t clockid;
+    clockid_t clockid = CLOCK_THREAD_CPUTIME_ID;
     int ret;
 
     /*
-     * XXX This is essentially a copy of the Linux implementation,
-     *     but with fewer indirections.
+     * On FreeBSD the clock returned by pthread_getcpuclockid is significantly
+     * less accurare than CLOCK_THREAD_CPUTIME_ID for the current thread.
+     * Therefore we only use pthread_getcpuclockid when requesting the cpu time
+     * for threads other than the current.
      */
-    ret = Bsd::_getcpuclockid(thread->osthread()->pthread_id(), &clockid);
-    if (ret != 0)
-      return -1;
+    if (thread != Thread::current()) {
+      if (Bsd::_getcpuclockid != nullptr) {
+        return -1;
+      }
+
+      ret = Bsd::_getcpuclockid(thread->osthread()->pthread_id(), &clockid);
+      if (ret != 0)
+        return -1;
+    }
+
     /* NB: _clock_gettime only needs to be valid for CLOCK_MONOTONIC. */
     ret = ::clock_gettime(clockid, &tp);
     if (ret != 0)
