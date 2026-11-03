@@ -2783,7 +2783,7 @@ jlong os::thread_cpu_time(Thread *thread, bool user_sys_cpu_time) {
      * for threads other than the current.
      */
     if (thread != Thread::current()) {
-      if (Bsd::_getcpuclockid != nullptr) {
+      if (Bsd::_getcpuclockid == nullptr) {
         return -1;
       }
 
