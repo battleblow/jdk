@@ -37,11 +37,7 @@
 #include "libproc_impl.h"
 #include "cds.h"
 
-#ifdef __APPLE__
-#include "sun_jvm_hotspot_debugger_amd64_AMD64ThreadContext.h"
-#endif
-
-#ifdef _ALLBSD_SOURCE
+#ifdef _BSDONLY_SOURCE
 #include <jni.h>
 #endif
 
