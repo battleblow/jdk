@@ -514,8 +514,28 @@ public abstract class CallArranger {
                     final boolean isLargeBigEndianStruct = isBigEndian && layout.byteSize() > MAX_COPY_SIZE;
                     long offset = 0;
                     for (int index = 0; index < regs.first().length; index++) {
-                        // Use second if available since first one only contains one 32 bit value.
-                        VMStorage storage = regs.second()[index] == null ? regs.first()[index] : regs.second()[index];
+                        VMStorage storage = regs.first()[index];
+                        VMStorage storage2 = regs.second()[index];
+                        if (storage2 != null) {
+                            // The last element in an FP register shares its doubleword in the parameter
+                            // save area with the next element ("no partial DW rule"). A caller is not
+                            // required to write the first half of that doubleword when it is on the stack
+                            // (clang does not), so take the first element from the FP register, which is
+                            // always valid, and only the second one from the doubleword.
+                            bindings.dup()
+                                    .vmLoad(storage, float.class)
+                                    .bufferStore(offset, float.class);
+                            bindings.dup();
+                            if (isBigEndian) {
+                                bindings.vmLoad(storage2, int.class);
+                            } else {
+                                bindings.vmLoad(storage2, long.class)
+                                        .shiftRight(4, int.class);
+                            }
+                            bindings.bufferStore(offset + 4, int.class);
+                            offset += 8;
+                            continue;
+                        }
                         // Floats are 4 Bytes, Double, GP reg and stack slots 8 Bytes (except maybe last slot).
                         final long size = (baseSize == 4 &&
                                            (storage.type() == StorageType.FLOAT || layout.byteSize() - offset < 8)) ? 4 : 8;
