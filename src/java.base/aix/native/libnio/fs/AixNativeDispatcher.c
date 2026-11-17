@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/ea.h>
 #include <sys/types.h>
 #include <sys/mntctl.h>
 
@@ -232,4 +233,65 @@ Java_sun_nio_fs_AixNativeDispatcher_getmntctl(JNIEnv* env, jclass this)
         free(buffer);
     }
     return ret;
+}
+
+/*
+ * The following methods are part of the UnixNativeDispatcher parent class,
+ * but is placed here since they contain platform specific implementations.
+ */
+
+JNIEXPORT jint JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fgetxattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress, jlong valueAddress, jint valueLen)
+{
+    ssize_t res = -1;
+    const char* name = jlong_to_ptr(nameAddress);
+    void* value = jlong_to_ptr(valueAddress);
+
+    res = fgetea(fd, name, value, valueLen);
+
+    if (res == (ssize_t)-1)
+        throwUnixException(env, errno);
+    return (jint)res;
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fsetxattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress, jlong valueAddress, jint valueLen)
+{
+    int res = -1;
+    const char* name = jlong_to_ptr(nameAddress);
+    void* value = jlong_to_ptr(valueAddress);
+
+    res = fsetea(fd, name, value, valueLen, 0);
+
+    if (res == -1)
+        throwUnixException(env, errno);
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fremovexattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress)
+{
+    int res = -1;
+    const char* name = jlong_to_ptr(nameAddress);
+
+    res = fremoveea(fd, name);
+
+    if (res == -1)
+        throwUnixException(env, errno);
+}
+
+JNIEXPORT jint JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_flistxattr(JNIEnv* env, jclass clazz,
+    jint fd, jlong listAddress, jint size)
+{
+    ssize_t res = -1;
+    char* list = jlong_to_ptr(listAddress);
+
+    res = flistea(fd, list, (size_t)size);
+
+    if (res == (ssize_t)-1)
+        throwUnixException(env, errno);
+    return (jint)res;
 }

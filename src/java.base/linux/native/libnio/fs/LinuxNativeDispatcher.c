@@ -38,6 +38,7 @@
 #include <fcntl.h>
 
 #include <sys/sendfile.h>
+#include <sys/xattr.h>
 
 #include "sun_nio_fs_LinuxNativeDispatcher.h"
 
@@ -228,4 +229,65 @@ Java_sun_nio_fs_LinuxNativeDispatcher_directCopy0
     } while (bytes_sent > 0);
 
     return 0;
+}
+
+/*
+ * The following methods are part of the UnixNativeDispatcher parent class,
+ * but is placed here since they contain platform specific implementations.
+ */
+
+JNIEXPORT jint JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fgetxattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress, jlong valueAddress, jint valueLen)
+{
+    ssize_t res = -1;
+    const char* name = jlong_to_ptr(nameAddress);
+    void* value = jlong_to_ptr(valueAddress);
+
+    res = fgetxattr(fd, name, value, valueLen);
+
+    if (res == (ssize_t)-1)
+        throwUnixException(env, errno);
+    return (jint)res;
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fsetxattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress, jlong valueAddress, jint valueLen)
+{
+    int res = -1;
+    const char* name = jlong_to_ptr(nameAddress);
+    void* value = jlong_to_ptr(valueAddress);
+
+    res = fsetxattr(fd, name, value, valueLen, 0);
+
+    if (res == -1)
+        throwUnixException(env, errno);
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fremovexattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress)
+{
+    int res = -1;
+    const char* name = jlong_to_ptr(nameAddress);
+
+    res = fremovexattr(fd, name);
+
+    if (res == -1)
+        throwUnixException(env, errno);
+}
+
+JNIEXPORT jint JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_flistxattr(JNIEnv* env, jclass clazz,
+    jint fd, jlong listAddress, jint size)
+{
+    ssize_t res = -1;
+    char* list = jlong_to_ptr(listAddress);
+
+    res = flistxattr(fd, list, (size_t)size);
+
+    if (res == (ssize_t)-1)
+        throwUnixException(env, errno);
+    return (jint)res;
 }
