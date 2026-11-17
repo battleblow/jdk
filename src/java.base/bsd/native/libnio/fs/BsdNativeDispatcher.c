@@ -30,7 +30,7 @@
 
 #include <sys/param.h>
 #include <sys/mount.h>
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 #include <sys/types.h>
 #include <sys/extattr.h>
 #endif
@@ -205,4 +205,79 @@ Java_sun_nio_fs_BsdNativeDispatcher_endfsstat(JNIEnv* env, jclass this, jlong va
         free(iter->buf);
         free(iter);
     }
+}
+
+/*
+ * The following methods are part of the UnixNativeDispatcher parent class,
+ * but is placed here since they contain platform specific implementations.
+ */
+
+JNIEXPORT jint JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fgetxattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress, jlong valueAddress, jint valueLen)
+{
+    ssize_t res = -1;
+#ifndef __OpenBSD__
+    const char* name = jlong_to_ptr(nameAddress);
+    void* value = jlong_to_ptr(valueAddress);
+
+    res = extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, name, value, (size_t)valueLen);
+    if (res == (ssize_t)-1)
+        throwUnixException(env, errno);
+#else
+    throwUnixException(env, ENOTSUP);
+#endif
+
+    return (jint)res;
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fsetxattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress, jlong valueAddress, jint valueLen)
+{
+#ifndef __OpenBSD__
+    int res = -1;
+    const char* name = jlong_to_ptr(nameAddress);
+    void* value = jlong_to_ptr(valueAddress);
+
+    res = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, name, value, (size_t)valueLen);
+    if (res == -1)
+        throwUnixException(env, errno);
+#else
+    throwUnixException(env, ENOTSUP);
+#endif
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fremovexattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress)
+{
+#ifndef __OpenBSD__
+    int res = -1;
+    const char* name = jlong_to_ptr(nameAddress);
+
+    res = extattr_delete_fd(fd, EXTATTR_NAMESPACE_USER, name);
+    if (res == -1)
+        throwUnixException(env, errno);
+#else
+    throwUnixException(env, ENOTSUP);
+#endif
+}
+
+JNIEXPORT jint JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_flistxattr(JNIEnv* env, jclass clazz,
+    jint fd, jlong listAddress, jint size)
+{
+    ssize_t res = -1;
+#ifndef __OpenBSD__
+    char* list = jlong_to_ptr(listAddress);
+
+    res = extattr_list_fd(fd, EXTATTR_NAMESPACE_USER, list, (size_t)size);
+    if (res == (ssize_t)-1)
+        throwUnixException(env, errno);
+#else
+    throwUnixException(env, ENOTSUP);
+#endif
+
+    return (jint)res;
 }
