@@ -43,7 +43,7 @@ import static sun.nio.fs.UnixNativeDispatcher.*;
 abstract class UnixUserDefinedFileAttributeView
     extends AbstractUserDefinedFileAttributeView
 {
-    protected static final Unsafe unsafe = Unsafe.getUnsafe();
+    private static final Unsafe unsafe = Unsafe.getUnsafe();
 
     private static final JavaNioAccess NIO_ACCESS = SharedSecrets.getJavaNioAccess();
 
@@ -64,9 +64,7 @@ abstract class UnixUserDefinedFileAttributeView
     private byte[] nameAsBytes(UnixPath file, String name) throws IOException {
         if (name == null)
             throw new NullPointerException("'name' is null");
-        if (prefixNamespace()) {
-            name = USER_NAMESPACE + name;
-        }
+        name = USER_NAMESPACE + name;
         byte[] bytes = Util.toBytes(name);
         if (bytes.length > maxNameLength()) {
             throw new FileSystemException(file.getPathForExceptionMessage(),
@@ -80,16 +78,11 @@ abstract class UnixUserDefinedFileAttributeView
      */
     protected abstract int maxNameLength();
 
-    protected boolean prefixNamespace() {
-        return true;
-    }
-
     // Parses buffer as array of NULL-terminated C strings.
-    protected static List<String> asList(long address, int size) {
+    private static List<String> asList(long address, int size) {
         List<String> list = new ArrayList<>();
         int start = 0;
         int pos = 0;
-
         while (pos < size) {
             if (unsafe.getByte(address + pos) == 0) {
                 int len = pos - start;
@@ -102,13 +95,6 @@ abstract class UnixUserDefinedFileAttributeView
             }
             pos++;
         }
-
-        // Only "user" namespace attributes
-        list = list.stream()
-                .filter(s -> s.startsWith(USER_NAMESPACE))
-                .map(s -> s.substring(USER_NAMESPACE.length()))
-                .toList();
-
         return list;
     }
 
@@ -137,7 +123,11 @@ abstract class UnixUserDefinedFileAttributeView
             x.rethrowAsIOException(file);
         }
         try {
-            return list(fd, MIN_LISTXATTR_BUF_SIZE);
+            List<String> attrNames = list(fd, MIN_LISTXATTR_BUF_SIZE);
+            return attrNames.stream()
+                    .filter(s -> s.startsWith(USER_NAMESPACE))
+                    .map(s -> s.substring(USER_NAMESPACE.length()))
+                    .toList();
         } catch (UnixException x) {
             throw new FileSystemException(file.getPathForExceptionMessage(),
                 null, "Unable to get list of extended attributes: " +

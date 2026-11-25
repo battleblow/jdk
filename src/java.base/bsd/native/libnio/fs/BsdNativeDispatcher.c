@@ -30,7 +30,7 @@
 
 #include <sys/param.h>
 #include <sys/mount.h>
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__NetBSD__)
 #include <sys/types.h>
 #include <sys/extattr.h>
 #endif
@@ -205,4 +205,133 @@ Java_sun_nio_fs_BsdNativeDispatcher_endfsstat(JNIEnv* env, jclass this, jlong va
         free(iter->buf);
         free(iter);
     }
+}
+
+/*
+ * The following methods are part of the UnixNativeDispatcher parent class,
+ * but is placed here since they contain platform specific implementations.
+ */
+
+JNIEXPORT jint JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fgetxattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress, jlong valueAddress, jint valueLen)
+{
+    ssize_t res = -1;
+#ifndef __OpenBSD__
+    const char* name = jlong_to_ptr(nameAddress);
+    void* value = jlong_to_ptr(valueAddress);
+
+    // name will allwaye be prefixed with 'user.', so we pass only the part
+    // after the prefix to the extattr_get_fd function.
+    const char* attr_name = strchr(name, '.') + 1;
+    res = extattr_get_fd(fd, EXTATTR_NAMESPACE_USER, attr_name, value, (size_t)valueLen);
+    if (res == (ssize_t)-1)
+        throwUnixException(env, errno);
+#else
+    throwUnixException(env, ENOTSUP);
+#endif
+
+    return (jint)res;
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fsetxattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress, jlong valueAddress, jint valueLen)
+{
+#ifndef __OpenBSD__
+    int res = -1;
+    const char* name = jlong_to_ptr(nameAddress);
+    void* value = jlong_to_ptr(valueAddress);
+
+    // name will allwaye be prefixed with 'user.', so we pass only the part
+    // after the prefix to the extattr_set_fd function.
+    const char* attr_name = strchr(name, '.') + 1;
+    res = extattr_set_fd(fd, EXTATTR_NAMESPACE_USER, attr_name, value, (size_t)valueLen);
+    if (res == -1)
+        throwUnixException(env, errno);
+#else
+    throwUnixException(env, ENOTSUP);
+#endif
+}
+
+JNIEXPORT void JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_fremovexattr0(JNIEnv* env, jclass clazz,
+    jint fd, jlong nameAddress)
+{
+#ifndef __OpenBSD__
+    int res = -1;
+    const char* name = jlong_to_ptr(nameAddress);
+
+    // name will allwaye be prefixed with 'user.', so we pass only the part
+    // after the prefix to the extattr_delete_fd function.
+    const char* attr_name = strchr(name, '.') + 1;
+    res = extattr_delete_fd(fd, EXTATTR_NAMESPACE_USER, attr_name);
+    if (res == -1)
+        throwUnixException(env, errno);
+#else
+    throwUnixException(env, ENOTSUP);
+#endif
+}
+
+JNIEXPORT jint JNICALL
+Java_sun_nio_fs_UnixNativeDispatcher_flistxattr(JNIEnv* env, jclass clazz,
+    jint fd, jlong listAddress, jint size)
+{
+    ssize_t res = -1;
+#ifndef __OpenBSD__
+    char* list = jlong_to_ptr(listAddress);
+
+    // The UnixNativeDispatcher class expects a buffer of zero-terminated names
+    // where each is prefixed with 'user.'. On BSD we get a buffer with
+    // length-prefixed names, and without the 'user.' prefix for each
+    // attribute. So we need to convert to the format expected by the calling
+    // class.
+
+    // The BSD list should allways be smaller than the resulting list, so it
+    // should be safe to use the same max size.
+    char* bsd_list = list ? malloc(size) : NULL;
+
+    ssize_t bytes_read = extattr_list_fd(fd, EXTATTR_NAMESPACE_USER, bsd_list, (size_t)size);
+    if (bytes_read == (ssize_t)-1) {
+        throwUnixException(env, errno);
+    }
+
+    if (list != NULL) {
+        //
+        // Convert the buffer to the expected format
+        //
+        const char* prefix = "user.";
+        ssize_t prefixlen = strlen(prefix);
+
+        char* dest = list;
+        char* src = bsd_list;
+        ssize_t remaining = size;
+
+        while (src - bsd_list < bytes_read) {
+            ssize_t len = *src++;
+
+            if (len + prefixlen < remaining) {
+                char* start = dest;
+
+                memcpy(dest, prefix, prefixlen);
+                memcpy(dest + prefixlen, src, len);
+
+                dest += prefixlen + len;
+                *dest++ = 0;
+
+                src += len;
+                remaining -= dest - start;
+            }
+        }
+
+        res = dest - list;
+
+        free(bsd_list);
+    }
+
+#else // !__OpenBSD__
+    throwUnixException(env, ENOTSUP);
+#endif // !__OpenBSD__
+
+    return (jint)res;
 }

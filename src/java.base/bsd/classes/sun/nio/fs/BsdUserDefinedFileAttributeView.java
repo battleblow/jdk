@@ -25,9 +25,6 @@
 
 package sun.nio.fs;
 
-import java.util.*;
-import jdk.internal.misc.Unsafe;
-
 class BsdUserDefinedFileAttributeView
     extends UnixUserDefinedFileAttributeView
 {
@@ -39,29 +36,5 @@ class BsdUserDefinedFileAttributeView
     @Override
     protected int maxNameLength() {
         return 255;
-    }
-
-    @Override
-    protected boolean prefixNamespace() {
-        return false;
-    }
-
-    protected static List<String> asList(long address, int size) {
-        List<String> list = new ArrayList<>();
-        int start = 0;
-        int pos = 0;
-
-        while (pos < size) {
-            int len = unsafe.getByte(address + pos) & 0xFF;
-            start = pos + 1;
-            byte[] value = new byte[len];
-            unsafe.copyMemory(null, address+start, value,
-                Unsafe.ARRAY_BYTE_BASE_OFFSET, len);
-            String s = Util.toString(value);
-            list.add(s);
-            pos = start + len;
-        }
-
-        return list;
     }
 }
