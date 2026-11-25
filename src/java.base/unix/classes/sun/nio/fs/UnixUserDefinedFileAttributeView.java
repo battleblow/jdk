@@ -103,7 +103,6 @@ abstract class UnixUserDefinedFileAttributeView
         try {
             try (NativeBuffer buffer = NativeBuffers.getNativeBuffer(bufSize)) {
                 int n = flistxattr(fd, buffer.address(), bufSize);
-                System.out.println("[::] flistxattr returned " + n + " bytes.");
                 return asList(buffer.address(), n);
             } // release buffer before recursion
         } catch (UnixException x) {
