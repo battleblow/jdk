@@ -770,7 +770,7 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_CPU_DEP],
     fi
 
   elif test "x$TOOLCHAIN_TYPE" = xclang; then
-    if test "x$FLAGS_OS" = xlinux || test "x$OPENJDK_TARGET_OS_ENV" = xbsd.freebsd; then
+    if test "x$FLAGS_OS" = xlinux || test "x$FLAGS_OS" = xbsd; then
       # ppc test not really needed for clang
       if test "x$FLAGS_CPU_ARCH" != xarm &&  test "x$FLAGS_CPU_ARCH" != xppc; then
         # for all archs except arm and ppc, prevent gcc to omit frame pointer
@@ -780,6 +780,10 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_CPU_DEP],
         # Little endian machine uses ELFv2 ABI.
         # Use Power8, this is the first CPU to support PPC64 LE with ELFv2 ABI.
         $1_CFLAGS_CPU_JVM="${$1_CFLAGS_CPU_JVM} -DABI_ELFv2 -mcpu=power8 -mtune=power10"
+      fi
+      if test "x$FLAGS_CPU" = xppc64 && test "x$FLAGS_OS" = xbsd; then
+        # Big endian machine uses ELFv2 ABI on BSD.
+        $1_CFLAGS_CPU_JVM="${$1_CFLAGS_CPU_JVM} -DABI_ELFv2"
       fi
     fi
     if test "x$OPENJDK_TARGET_OS" = xaix; then
