@@ -29,7 +29,7 @@ class BsdUserDefinedFileAttributeView
     extends UnixUserDefinedFileAttributeView
 {
     BsdUserDefinedFileAttributeView(UnixPath file, boolean followLinks) {
-        super(file, followLinks, UnixUserDefinedFileAttributeView.FileAttributeType.BSD);
+        super(file, followLinks);
     }
 
     // Should be equal to EXTATTR_MAXNAMELEN
