@@ -68,6 +68,7 @@ import static jdk.internal.foreign.abi.ppc64.PPC64Architecture.abiFor;
 public abstract class CallArranger {
     final boolean useABIv2 = useABIv2();
     final boolean isAIX = isAIX();
+    final boolean isBigEndian = isBigEndian();
 
     private static final int STACK_SLOT_SIZE = 8;
     private static final int MAX_COPY_SIZE = 8;
@@ -104,6 +105,13 @@ public abstract class CallArranger {
      */
     protected abstract boolean useABIv2();
     protected abstract boolean isAIX();
+
+    /**
+     * Select byte order. On big-endian targets a float passed in a stack slot
+     * occupies the second half of the slot, and the partially used last slot
+     * of a struct passed as its memory image is left-justified.
+     */
+    protected abstract boolean isBigEndian();
 
     public Bindings getBindings(MethodType mt, FunctionDescriptor cDesc, boolean forUpcall) {
         return getBindings(mt, cDesc, forUpcall, LinkerOptions.empty());
@@ -214,7 +222,7 @@ public abstract class CallArranger {
             // offset for the next argument which will really use the stack.
             // The reserved space for the Parameter Save Area is determined by the DowncallStubGenerator.
             VMStorage stack;
-            if (!useABIv2 && !isAIX && is32Bit) {
+            if (isBigEndian && !isAIX && is32Bit) {
                 stackAlloc(4, STACK_SLOT_SIZE); // Skip first half of stack slot.
                 stack = stackAlloc(4, 4);
             } else {
@@ -365,7 +373,7 @@ public abstract class CallArranger {
                 case STRUCT_REGISTER -> {
                     assert carrier == MemorySegment.class;
                     VMStorage[] regs = storageCalculator.structAlloc(layout);
-                    final boolean isLargeABIv1Struct = !useABIv2 &&
+                    final boolean isLargeBigEndianStruct = isBigEndian &&
                         (isAIX || layout.byteSize() > MAX_COPY_SIZE);
                     long offset = 0;
                     for (VMStorage storage : regs) {
@@ -375,7 +383,7 @@ public abstract class CallArranger {
                         Class<?> type = SharedUtils.primitiveCarrierForSize(size, false);
                         if (offset + size < layout.byteSize()) {
                             bindings.dup();
-                        } else if (isLargeABIv1Struct) {
+                        } else if (isLargeBigEndianStruct) {
                             // Last slot requires shift.
                             shiftAmount = MAX_COPY_SIZE - (int) size;
                         }
@@ -462,7 +470,7 @@ public abstract class CallArranger {
                     assert carrier == MemorySegment.class;
                     bindings.allocate(layout);
                     VMStorage[] regs = storageCalculator.structAlloc(layout);
-                    final boolean isLargeABIv1Struct = !useABIv2 &&
+                    final boolean isLargeBigEndianStruct = isBigEndian &&
                         (isAIX || layout.byteSize() > MAX_COPY_SIZE);
                     long offset = 0;
                     for (VMStorage storage : regs) {
@@ -470,7 +478,7 @@ public abstract class CallArranger {
                         final long size = Math.min(layout.byteSize() - offset, MAX_COPY_SIZE);
                         int shiftAmount = 0;
                         Class<?> type = SharedUtils.primitiveCarrierForSize(size, false);
-                        if (isLargeABIv1Struct && offset + size >= layout.byteSize()) {
+                        if (isLargeBigEndianStruct && offset + size >= layout.byteSize()) {
                             // Last slot requires shift.
                             shiftAmount = MAX_COPY_SIZE - (int) size;
                         }

@@ -41,4 +41,9 @@ public class ABIv2CallArranger extends CallArranger {
     protected boolean isAIX() {
         return false;
     }
+
+    @Override
+    protected boolean isBigEndian() {
+        return false;
+    }
 }
