@@ -461,10 +461,6 @@ struct spa_error_location {
  * \}
  */
 
-#ifndef ECHRNG
-#define ECHRNG EINVAL
-#endif
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

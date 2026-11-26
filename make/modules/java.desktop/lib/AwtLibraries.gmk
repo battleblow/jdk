@@ -253,7 +253,7 @@ ifeq ($(call isTargetOs, windows macosx)+$(ENABLE_HEADLESS_ONLY), false+false)
       #
 
   # exclude pipewire from the AIX build, no Wayland support
-  ifeq ($(call isTargetOs, aix), false)
+  ifeq ($(call isTargetOs, aix bsd), false)
     LIBAWT_XAWT_EXTRA_HEADER_DIRS += libpipewire/include
   endif
 
