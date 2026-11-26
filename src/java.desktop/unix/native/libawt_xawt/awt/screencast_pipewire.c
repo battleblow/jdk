@@ -32,7 +32,7 @@
 #include "jni_util.h"
 #include "awt.h"
 
-#ifndef _AIX
+#if !defined(_AIX) && !defined(_BSDONLY_SOURCE)
 #include "screencast_pipewire.h"
 #include "java_awt_event_KeyEvent.h"
 
