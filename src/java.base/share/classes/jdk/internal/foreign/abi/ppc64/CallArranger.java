@@ -37,6 +37,7 @@ import jdk.internal.foreign.abi.LinkerOptions;
 import jdk.internal.foreign.abi.SharedUtils;
 import jdk.internal.foreign.abi.VMStorage;
 import jdk.internal.foreign.abi.ppc64.aix.AixCallArranger;
+import jdk.internal.foreign.abi.ppc64.bsd.ABIv2BECallArranger;
 import jdk.internal.foreign.abi.ppc64.linux.ABIv1CallArranger;
 import jdk.internal.foreign.abi.ppc64.linux.ABIv2CallArranger;
 
@@ -61,13 +62,14 @@ import static jdk.internal.foreign.abi.ppc64.PPC64Architecture.abiFor;
  *
  * This includes taking care of synthetic arguments like pointers to return buffers for 'in-memory' returns.
  *
- * There are minor differences between the ABIs implemented on Linux and AIX
+ * There are minor differences between the ABIs implemented on Linux, AIX and BSD
  * which are handled in sub-classes. Clients should access these through the provided
- * public constants CallArranger.ABIv1/2.
+ * public constants CallArranger.ABIv1/2 and CallArranger.ABIv2BE.
  */
 public abstract class CallArranger {
     final boolean useABIv2 = useABIv2();
     final boolean isAIX = isAIX();
+    final boolean isBigEndian = isBigEndian();
 
     private static final int STACK_SLOT_SIZE = 8;
     private static final int MAX_COPY_SIZE = 8;
@@ -97,6 +99,7 @@ public abstract class CallArranger {
 
     public static final CallArranger ABIv1 = new ABIv1CallArranger();
     public static final CallArranger ABIv2 = new ABIv2CallArranger();
+    public static final CallArranger ABIv2BE = new ABIv2BECallArranger();
     public static final CallArranger AIX = new AixCallArranger();
 
     /**
@@ -104,6 +107,13 @@ public abstract class CallArranger {
      */
     protected abstract boolean useABIv2();
     protected abstract boolean isAIX();
+
+    /**
+     * Select byte order. On big-endian targets a float passed in a stack slot
+     * occupies the second half of the slot, and the partially used last slot
+     * of a struct passed as its memory image is left-justified.
+     */
+    protected abstract boolean isBigEndian();
 
     public Bindings getBindings(MethodType mt, FunctionDescriptor cDesc, boolean forUpcall) {
         return getBindings(mt, cDesc, forUpcall, LinkerOptions.empty());
@@ -214,7 +224,7 @@ public abstract class CallArranger {
             // offset for the next argument which will really use the stack.
             // The reserved space for the Parameter Save Area is determined by the DowncallStubGenerator.
             VMStorage stack;
-            if (!useABIv2 && !isAIX && is32Bit) {
+            if (isBigEndian && !isAIX && is32Bit) {
                 stackAlloc(4, STACK_SLOT_SIZE); // Skip first half of stack slot.
                 stack = stackAlloc(4, 4);
             } else {
@@ -365,7 +375,7 @@ public abstract class CallArranger {
                 case STRUCT_REGISTER -> {
                     assert carrier == MemorySegment.class;
                     VMStorage[] regs = storageCalculator.structAlloc(layout);
-                    final boolean isLargeABIv1Struct = !useABIv2 &&
+                    final boolean isLargeBigEndianStruct = isBigEndian &&
                         (isAIX || layout.byteSize() > MAX_COPY_SIZE);
                     long offset = 0;
                     for (VMStorage storage : regs) {
@@ -375,7 +385,7 @@ public abstract class CallArranger {
                         Class<?> type = SharedUtils.primitiveCarrierForSize(size, false);
                         if (offset + size < layout.byteSize()) {
                             bindings.dup();
-                        } else if (isLargeABIv1Struct) {
+                        } else if (isLargeBigEndianStruct) {
                             // Last slot requires shift.
                             shiftAmount = MAX_COPY_SIZE - (int) size;
                         }
@@ -394,6 +404,8 @@ public abstract class CallArranger {
                     List<MemoryLayout> scalarLayouts = TypeClass.scalarLayouts((GroupLayout) layout);
                     HfaRegs regs = storageCalculator.hfaAlloc(scalarLayouts);
                     final long baseSize = scalarLayouts.get(0).byteSize();
+                    // A struct with a single float is passed like a float and needs no shift.
+                    final boolean isLargeBigEndianStruct = isBigEndian && layout.byteSize() > MAX_COPY_SIZE;
                     long offset = 0;
                     for (int index = 0; index < regs.first().length; index++) {
                         VMStorage storage = regs.first()[index];
@@ -404,8 +416,15 @@ public abstract class CallArranger {
                         if (offset + size < layout.byteSize()) {
                             bindings.dup();
                         }
-                        bindings.bufferLoad(offset, type)
-                                .vmStore(storage, type);
+                        if (isLargeBigEndianStruct && size == 4 && storage.type() != StorageType.FLOAT) {
+                            // Partially used last GP slot: left-justify the element.
+                            bindings.bufferLoad(offset, type)
+                                    .shiftLeft(4, type)
+                                    .vmStore(storage, long.class);
+                        } else {
+                            bindings.bufferLoad(offset, type)
+                                    .vmStore(storage, type);
+                        }
                         VMStorage storage2 = regs.second()[index];
                         if (storage2 != null) {
                             // We have a second slot to fill (always 64 bit GP reg or stack slot).
@@ -462,7 +481,7 @@ public abstract class CallArranger {
                     assert carrier == MemorySegment.class;
                     bindings.allocate(layout);
                     VMStorage[] regs = storageCalculator.structAlloc(layout);
-                    final boolean isLargeABIv1Struct = !useABIv2 &&
+                    final boolean isLargeBigEndianStruct = isBigEndian &&
                         (isAIX || layout.byteSize() > MAX_COPY_SIZE);
                     long offset = 0;
                     for (VMStorage storage : regs) {
@@ -470,7 +489,7 @@ public abstract class CallArranger {
                         final long size = Math.min(layout.byteSize() - offset, MAX_COPY_SIZE);
                         int shiftAmount = 0;
                         Class<?> type = SharedUtils.primitiveCarrierForSize(size, false);
-                        if (isLargeABIv1Struct && offset + size >= layout.byteSize()) {
+                        if (isLargeBigEndianStruct && offset + size >= layout.byteSize()) {
                             // Last slot requires shift.
                             shiftAmount = MAX_COPY_SIZE - (int) size;
                         }
@@ -491,17 +510,45 @@ public abstract class CallArranger {
                     List<MemoryLayout> scalarLayouts = TypeClass.scalarLayouts((GroupLayout) layout);
                     HfaRegs regs = storageCalculator.hfaAlloc(scalarLayouts);
                     final long baseSize = scalarLayouts.get(0).byteSize();
+                    // A struct with a single float is passed like a float and needs no shift.
+                    final boolean isLargeBigEndianStruct = isBigEndian && layout.byteSize() > MAX_COPY_SIZE;
                     long offset = 0;
                     for (int index = 0; index < regs.first().length; index++) {
-                        // Use second if available since first one only contains one 32 bit value.
-                        VMStorage storage = regs.second()[index] == null ? regs.first()[index] : regs.second()[index];
+                        VMStorage storage = regs.first()[index];
+                        VMStorage storage2 = regs.second()[index];
+                        if (storage2 != null) {
+                            // The last element in an FP register shares its doubleword in the parameter
+                            // save area with the next element ("no partial DW rule"). A caller is not
+                            // required to write the first half of that doubleword when it is on the stack
+                            // (clang does not), so take the first element from the FP register, which is
+                            // always valid, and only the second one from the doubleword.
+                            bindings.dup()
+                                    .vmLoad(storage, float.class)
+                                    .bufferStore(offset, float.class);
+                            bindings.dup();
+                            if (isBigEndian) {
+                                bindings.vmLoad(storage2, int.class);
+                            } else {
+                                bindings.vmLoad(storage2, long.class)
+                                        .shiftRight(4, int.class);
+                            }
+                            bindings.bufferStore(offset + 4, int.class);
+                            offset += 8;
+                            continue;
+                        }
                         // Floats are 4 Bytes, Double, GP reg and stack slots 8 Bytes (except maybe last slot).
                         final long size = (baseSize == 4 &&
                                            (storage.type() == StorageType.FLOAT || layout.byteSize() - offset < 8)) ? 4 : 8;
                         Class<?> type = SharedUtils.primitiveCarrierForSize(size, storage.type() == StorageType.FLOAT);
-                        bindings.dup()
-                                .vmLoad(storage, type)
-                                .bufferStore(offset, type);
+                        bindings.dup();
+                        if (isLargeBigEndianStruct && size == 4 && storage.type() != StorageType.FLOAT) {
+                            // Partially used last GP slot: the element is left-justified.
+                            bindings.vmLoad(storage, long.class)
+                                    .shiftRight(4, type);
+                        } else {
+                            bindings.vmLoad(storage, type);
+                        }
+                        bindings.bufferStore(offset, type);
                         offset += size;
                     }
                 }

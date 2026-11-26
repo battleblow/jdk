@@ -41,4 +41,9 @@ public class AixCallArranger extends CallArranger {
     protected boolean isAIX() {
         return true;
     }
+
+    @Override
+    protected boolean isBigEndian() {
+        return true;
+    }
 }

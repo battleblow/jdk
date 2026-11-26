@@ -34,6 +34,7 @@ import jdk.internal.foreign.abi.aarch64.macos.MacOsAArch64Linker;
 import jdk.internal.foreign.abi.aarch64.windows.WindowsAArch64Linker;
 import jdk.internal.foreign.abi.fallback.FallbackLinker;
 import jdk.internal.foreign.abi.ppc64.aix.AixPPC64Linker;
+import jdk.internal.foreign.abi.ppc64.bsd.BsdPPC64Linker;
 import jdk.internal.foreign.abi.ppc64.linux.LinuxPPC64Linker;
 import jdk.internal.foreign.abi.ppc64.linux.LinuxPPC64leLinker;
 import jdk.internal.foreign.abi.riscv64.linux.LinuxRISCV64Linker;
@@ -248,6 +249,7 @@ public final class SharedUtils {
             case AIX_PPC_64 -> AixPPC64Linker.getInstance();
             case LINUX_PPC_64 -> LinuxPPC64Linker.getInstance();
             case LINUX_PPC_64_LE -> LinuxPPC64leLinker.getInstance();
+            case BSD_PPC_64 -> BsdPPC64Linker.getInstance();
             case LINUX_RISCV_64 -> LinuxRISCV64Linker.getInstance();
             case LINUX_S390 -> LinuxS390Linker.getInstance();
             case FALLBACK -> FallbackLinker.getInstance();
